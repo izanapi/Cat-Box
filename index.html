@@ -1008,26 +1008,14 @@ function driftDrone(g){
 }
 
 function stopSourcesKeepTails(){
-  // Stop scheduling NEW generator events, but leave the FX graph alive.
-  ['A','B'].forEach(g=>{
-    if(gens[g]?.timer){
-      clearTimeout(gens[g].timer);
-      gens[g].timer=null;
-    }
-    // Continuous DRONE nodes must be faded/stopped, otherwise they never release.
-    if(gens[g]?.gain){
-      try{
-        gens[g].gain.gain.cancelScheduledValues(ctx.currentTime);
-        gens[g].gain.gain.setTargetAtTime(.0001,ctx.currentTime,.06);
-      }catch(e){}
-    }
-    if(gens[g]?.oscillators){
-      gens[g].oscillators.forEach(o=>{
-        try{o.stop(ctx.currentTime+.35)}catch(e){}
-      });
-      gens[g].oscillators=[];
-    }
-  });
+  // Kill generator scheduling and continuous source nodes only.
+  // The shared delay / reverb / master graph stays alive, so existing tails decay naturally.
+  ['A','B'].forEach(g=>stopGen(g));
+}
+
+function startSources(){
+  // Always create a fresh generator state after STOP.
+  ['A','B'].forEach(g=>rebuildGen(g));
 }
 
 function applyMix(){
@@ -1133,29 +1121,43 @@ function scheduleObserve(){
 async function startAudio(){
   initAudio();
   if(ctx.state!=='running')await ctx.resume();
-  if(!started)uiTimeOrigin=performance.now();
-  started=true;
+
+  if(!started){
+    started=true;
+    uiTimeOrigin=performance.now();
+
+    // initAudio() already creates the first pair. After a STOP, gens are null,
+    // so only rebuild when there are no active generator states.
+    if(!gens.A || !gens.B)startSources();
+  }
+
   $('audioBtn').textContent='■ STOP';
   $('audioBtn').classList.add('running');
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
 }
+
 $('audioBtn').onclick=async()=>{
   initAudio();
+
   if(started){
-    // Stop new generator activity, but keep the AudioContext and spatial FX alive.
     started=false;
     stopSourcesKeepTails();
+
     $('audioBtn').textContent='▶ PLAY';
     $('audioBtn').classList.remove('running');
-  }else{
-    if(ctx.state!=='running')await ctx.resume();
-    uiTimeOrigin=performance.now();
-    started=true;
-    ['A','B'].forEach(g=>scheduleGenerator(g));
-    $('audioBtn').textContent='■ STOP';
-    $('audioBtn').classList.add('running');
+    // Context deliberately remains RUNNING for ECHO / HALL tails.
+    $('audioState').textContent='AUDIO: TAIL';
+    return;
   }
-  $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
+
+  if(ctx.state!=='running')await ctx.resume();
+  started=true;
+  uiTimeOrigin=performance.now();
+  startSources();
+
+  $('audioBtn').textContent='■ STOP';
+  $('audioBtn').classList.add('running');
+  $('audioState').textContent='AUDIO: RUNNING';
 };
 
 $('catWalkBtn').onclick=async()=>{
