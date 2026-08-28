@@ -8,24 +8,34 @@
 <title>CAT BOX — CB-004</title>
 <style>
 :root{
-  --bg:#050505;
-  --ink:#f5f5f0;
-  --dim:#8f8f89;
-  --line:rgba(245,245,240,.34);
-  --faint:rgba(245,245,240,.10);
+  --bg:#0808e8;
+  --ink:#f7f7f2;
+  --dim:rgba(247,247,242,.62);
+  --line:rgba(247,247,242,.48);
+  --faint:rgba(247,247,242,.14);
+  --accent:#ff22c8;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:#000;color:var(--ink);font-family:"Courier New",ui-monospace,monospace}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Courier New",ui-monospace,monospace}
 body{-webkit-text-size-adjust:100%;overscroll-behavior:none}
 button,input{font:inherit}
 button{touch-action:manipulation}
+
+
+#circuitBG{
+  position:fixed;inset:0;width:100%;height:100%;
+  z-index:0;pointer-events:none;opacity:.9
+}
+#app{position:relative;z-index:1}
+.panel,.icon,.action{position:relative;z-index:2}
 #app{
   width:100%;max-width:500px;margin:auto;background:var(--bg);
   min-height:100svh;
   padding:calc(12px + env(safe-area-inset-top)) 10px calc(16px + env(safe-area-inset-bottom));
 }
 header{
-  display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:8px
+  display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
+  margin-bottom:8px;border-top:5px solid var(--accent);padding-top:5px
 }
 h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24em}
 .sub{text-align:center;color:var(--dim);font-size:6px;letter-spacing:.18em;margin-top:3px}
@@ -33,7 +43,7 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
   height:38px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:0
 }
 .panel{
-  border:1px solid var(--line);position:relative;background:rgba(255,255,255,.004)
+  border:1px solid var(--line);position:relative;background:transparent
 }
 .panel:before,.panel:after{
   content:"";position:absolute;width:7px;height:7px;pointer-events:none
@@ -59,6 +69,8 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
   font-size:5.5px;letter-spacing:.08em;padding:0 2px
 }
 .typeBtn.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.typeBtn.active:after{content:"";display:block;height:2px;background:var(--accent);position:absolute;left:0;right:0;bottom:0}
+.typeBtn{position:relative}
 
 .observe{
   padding:7px;display:grid;grid-template-rows:58px 58px minmax(0,1fr) 34px;
@@ -88,7 +100,7 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
 .obsTitle{font-size:6px;letter-spacing:.13em}
 .obsNote{font-size:5px;color:var(--dim);margin-top:2px}
 .watch{display:flex;gap:5px;align-items:center;font-size:5px;color:var(--dim)}
-.watch i{width:6px;height:6px;border-radius:50%;background:var(--ink);animation:pulse 1.7s infinite}
+.watch i{width:6px;height:6px;border-radius:0;background:var(--accent);animation:pulse 1.7s infinite}
 @keyframes pulse{50%{opacity:.2}}
 
 .fx{
@@ -106,12 +118,26 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
 .row{display:grid;grid-template-columns:116px 1fr 25px;gap:6px;align-items:center}
 .row b{font-weight:400;font-size:7px;letter-spacing:.11em}
 .row span{font-size:6px;color:var(--dim);text-align:right}
+.fxDesc{
+  margin:1px 0 0 0;
+  padding-left:122px;
+  font-size:5px;
+  letter-spacing:.12em;
+  color:var(--dim);
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis
+}
+@media(max-width:390px){
+  .fxDesc{padding-left:110px;font-size:4.7px}
+}
 input[type=range]{
   appearance:none;-webkit-appearance:none;width:100%;height:15px;background:transparent;margin:0
 }
 input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--faint)}
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:7px;height:13px;background:var(--ink);border:0;border-radius:0;margin-top:-5px
+  -webkit-appearance:none;width:7px;height:13px;background:var(--accent);border:0;border-radius:0;margin-top:-5px
 }
 .classicFx{
   display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
@@ -139,6 +165,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
 </style>
 </head>
 <body>
+<canvas id="circuitBG"></canvas>
 <main id="app">
 <header>
   <button class="icon" id="audioBtn">▶</button>
@@ -193,7 +220,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
   </div>
 
   <div class="effectField">
-    <div class="fieldHead"><span>EFFECT FIELD</span><span id="fieldState">0 PARTICLES</span></div>
+    <div class="fieldHead"><span id="fieldLabel">EFFECT FIELD</span><span id="fieldState">0 PARTICLES</span></div>
     <canvas id="field" width="460" height="90"></canvas>
   </div>
 
@@ -203,6 +230,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       <input id="super" type="range" min="0" max="100" value="58">
       <span id="superV">58</span>
     </div>
+    <div class="fxDesc">LAYER / PITCH / MULTIPLY</div>
   </div>
 
   <div class="control">
@@ -211,6 +239,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       <input id="tunnel" type="range" min="0" max="100" value="42">
       <span id="tunnelV">42</span>
     </div>
+    <div class="fxDesc">JUMP / REPEAT / SKIP</div>
   </div>
 
   <div class="control">
@@ -219,6 +248,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       <input id="deco" type="range" min="0" max="100" value="36">
       <span id="decoV">36</span>
     </div>
+    <div class="fxDesc">DECAY / BLUR / DESTROY</div>
   </div>
 
   <div class="control">
@@ -227,6 +257,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       <input id="ent" type="range" min="0" max="100" value="32">
       <span id="entV">32</span>
     </div>
+    <div class="fxDesc">A ↔ B INTERACTION</div>
   </div>
 
   <div class="classicFx">
@@ -260,6 +291,7 @@ let ctx=null,master,dryBus,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
 let started=false,observeTimer=null;
 let observed=false,collapse='AB';
 let particles=[];
+let circuitSignals=[];
 const p={
   A:{type:'PLUCK',on:true},
   B:{type:'DUST',on:true},
@@ -276,6 +308,30 @@ const visual={
   A:{hit:0,last:performance.now(),ghostPhase:0,dronePhase:0,dustSeed:0},
   B:{hit:0,last:performance.now(),ghostPhase:1.7,dronePhase:2.4,dustSeed:100}
 };
+let fieldFlashTimer=null;
+const fxHelp={
+  superposition:['SUPERPOSITION','MULTIPLE STATES'],
+  tunneling:['TUNNELING','TIME JUMP'],
+  decoherence:['DECOHERENCE','INFORMATION LOSS'],
+  entanglement:['ENTANGLEMENT','A ↔ B COUPLING'],
+  echo:['ECHO','REPEAT / FEEDBACK'],
+  hall:['HALL','LONG SPACE'],
+  volume:['VOLUME','MASTER OUTPUT']
+};
+function flashField(key,val){
+  const info=fxHelp[key];
+  if(!info)return;
+  $('fieldLabel').textContent=info[0]+' '+val;
+  $('fieldLabel').style.color='var(--accent)';
+  $('fieldState').textContent=info[1];
+  clearTimeout(fieldFlashTimer);
+  fieldFlashTimer=setTimeout(()=>{
+    $('fieldLabel').textContent='EFFECT FIELD';
+    $('fieldLabel').style.color='var(--dim)';
+    $('fieldState').textContent=particles.length+' PARTICLES';
+    fieldFlashTimer=null;
+  },900);
+}
 
 function makeSwitches(g){
   const root=$('switch'+g);
@@ -368,6 +424,14 @@ function stateAllows(g){
   return collapse==='AB'||collapse===g;
 }
 function addParticle(kind='normal',g='A'){
+  circuitSignals.push({
+    path:g==='A'?'A':'B',
+    t:0,
+    speed:rr(.012,.006),
+    life:1,
+    kind
+  });
+  if(circuitSignals.length>28)circuitSignals.shift();
   particles.push({
     x:g==='A'?8:452,
     y:rr(82,8),
@@ -624,6 +688,7 @@ function collapseNow(){
 
   const txt={A:'A EXISTS',B:'B EXISTS',AB:'A + B',N:'VACUUM'};
   $('stateText').textContent=txt[collapse];
+  $('stateText').style.color='var(--accent)';
   $('collapseInfo').textContent='COLLAPSED';
   addParticle('collapse',collapse==='B'?'B':'A');
   applyMix();
@@ -631,6 +696,7 @@ function collapseNow(){
   setTimeout(()=>{
     observed=false;
     $('stateText').textContent='SUPERPOSITION';
+    $('stateText').style.color='var(--ink)';
     $('collapseInfo').textContent='UNRESOLVED';
     applyMix();
   },rr(1450,620));
@@ -687,6 +753,7 @@ $('reroll').onclick=async()=>{
   $(id).oninput=e=>{
     p[key]=+e.target.value;
     $(out).textContent=p[key];
+    flashField(key,p[key]);
     applyMix();
   };
 });
@@ -902,9 +969,94 @@ function drawField(){
     }
   });
   x.globalAlpha=1;
-  $('fieldState').textContent=particles.length+' PARTICLES';
+  if(!fieldFlashTimer)$('fieldState').textContent=particles.length+' PARTICLES';
+}
+
+function drawCircuit(){
+  const c=$('circuitBG');
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const W=innerWidth,H=innerHeight;
+  if(c.width!==Math.floor(W*dpr)||c.height!==Math.floor(H*dpr)){
+    c.width=Math.floor(W*dpr);c.height=Math.floor(H*dpr);
+    c.style.width=W+'px';c.style.height=H+'px';
+  }
+  const x=c.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0);
+  x.clearRect(0,0,W,H);
+
+  const app=document.getElementById('app').getBoundingClientRect();
+  const ax=app.left, aw=app.width;
+  const topY=app.top+118;
+  const midY=app.top+Math.min(H*.50,430);
+  const fxY=app.top+Math.min(H*.61,545);
+  const botY=Math.min(H-48, app.bottom-56);
+
+  const leftX=ax+aw*.18;
+  const left2X=ax+aw*.32;
+  const centerX=ax+aw*.60;
+  const rightX=ax+aw*.83;
+
+  const drawPath=(pts,alpha=.16)=>{
+    x.strokeStyle=`rgba(247,247,242,${alpha})`;
+    x.lineWidth=1;
+    x.beginPath();
+    pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));
+    x.stroke();
+    x.fillStyle=`rgba(247,247,242,${alpha*.65})`;
+    pts.forEach(p=>x.fillRect(p[0]-1,p[1]-1,2,2));
+  };
+
+  const pathA=[[leftX,topY],[left2X,topY],[left2X,midY*.72],[centerX,midY*.72],[centerX,midY]];
+  const pathB=[[leftX,topY+150],[left2X,topY+150],[left2X,midY*.88],[centerX,midY*.88],[centerX,midY]];
+  const pathFX=[[centerX,midY],[centerX,fxY],[rightX,fxY],[rightX,botY]];
+  const pathOut=[[centerX,fxY],[ax+aw*.42,fxY],[ax+aw*.42,botY]];
+
+  drawPath(pathA,.13);
+  drawPath(pathB,.13);
+  drawPath(pathFX,.10);
+  drawPath(pathOut,.08);
+
+  const interpolate=(pts,t)=>{
+    let lens=[],total=0;
+    for(let i=0;i<pts.length-1;i++){
+      const dx=pts[i+1][0]-pts[i][0],dy=pts[i+1][1]-pts[i][1];
+      const l=Math.hypot(dx,dy);lens.push(l);total+=l;
+    }
+    let dist=t*total;
+    for(let i=0;i<lens.length;i++){
+      if(dist<=lens[i]){
+        const q=lens[i]?dist/lens[i]:0;
+        return [
+          pts[i][0]+(pts[i+1][0]-pts[i][0])*q,
+          pts[i][1]+(pts[i+1][1]-pts[i][1])*q
+        ];
+      }
+      dist-=lens[i];
+    }
+    return pts[pts.length-1];
+  };
+
+  circuitSignals.forEach(s=>{
+    s.t+=s.speed;
+    s.life-=.006;
+    const base=s.path==='A'?pathA:pathB;
+    let pos;
+    if(s.t<.62){
+      pos=interpolate(base,s.t/.62);
+    }else{
+      pos=interpolate(pathFX,(s.t-.62)/.38);
+    }
+    const a=Math.max(0,Math.min(1,s.life));
+    x.fillStyle=`rgba(234,247,255,${.25+.7*a})`;
+    x.shadowBlur=0;
+    x.shadowColor=s.kind==='ent'?'rgba(255,34,200,.95)':'rgba(247,247,242,.85)';
+    x.beginPath();x.arc(pos[0],pos[1],1.7,0,Math.PI*2);x.fill();
+    x.shadowBlur=0;
+  });
+  circuitSignals=circuitSignals.filter(s=>s.life>0&&s.t<1.05);
 }
 function animate(){
+  drawCircuit();
   drawEye();
   drawBox();
   drawWave('A');
