@@ -119,6 +119,17 @@ button{touch-action:manipulation}
 .obsTitle{font-size:6px;letter-spacing:.13em}
 .obsNote{font-size:5px;color:var(--dim);margin-top:2px}
 .watch{display:flex;gap:5px;align-items:center;font-size:5px;color:var(--dim)}
+
+.observeActions{display:flex;align-items:center;gap:5px}
+.catWalkBtn{
+  height:22px;padding:0 6px;border:1px solid var(--line);
+  background:transparent;color:var(--ink);
+  font:inherit;font-size:5.5px;letter-spacing:.09em;
+}
+.catWalkBtn.on{
+  background:var(--ink);color:var(--bg);
+  border-bottom:3px solid var(--accent);
+}
 .watch i{width:6px;height:6px;border-radius:0;background:var(--accent);animation:pulse 1.7s infinite}
 @keyframes pulse{50%{opacity:.2}}
 
@@ -255,7 +266,10 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
         <div class="obsTitle">OBSERVATION FIELD</div>
         <div class="obsNote">猫は勝手に観測される。</div>
       </div>
-      <div class="watch"><i></i><span>WATCHING</span></div>
+      <div class="observeActions">
+        <button class="catWalkBtn" id="catWalkBtn">CAT WALK</button>
+        <div class="watch"><i></i><span>WATCHING</span></div>
+      </div>
     </div>
   </div>
 </section>
@@ -356,6 +370,15 @@ const visual={
   B:{hit:0,last:performance.now(),ghostPhase:1.7,dronePhase:2.4,dustSeed:100}
 };
 let fieldFlashTimer=null;
+const catWalk={
+  on:false,
+  pos:0,
+  target:0,
+  lastFrame:performance.now(),
+  nextTarget:0,
+  nextPaw:0,
+  bob:0
+};
 const fxHelp={
   superposition:['SUPERPOSITION','MULTIPLE STATES'],
   tunneling:['TUNNELING','TIME JUMP'],
@@ -502,10 +525,48 @@ function addParticle(kind='normal',g='A'){
   });
   if(particles.length>90)particles.shift();
 }
+
+function catWalkAffinity(g){
+  if(!catWalk.on)return .5;
+  return g==='A' ? (1-catWalk.pos)/2 : (1+catWalk.pos)/2;
+}
+function updateCatWalk(now){
+  const dt=Math.min(.05,(now-catWalk.lastFrame)/1000);
+  catWalk.lastFrame=now;
+  if(!catWalk.on)return;
+
+  if(now>catWalk.nextTarget){
+    catWalk.target=Math.random()<.28 ? rr(.25,-.25) : rr(.92,-.92);
+    catWalk.nextTarget=now+rr(2600,850);
+  }
+
+  catWalk.pos += (catWalk.target-catWalk.pos)*Math.min(1,dt*2.2);
+  catWalk.bob=Math.sin(now*.0105)*.5+Math.sin(now*.0047)*.5;
+
+  if(started && now>catWalk.nextPaw){
+    const g=catWalk.pos<0?'A':'B';
+    if(p[g].on && Math.random()<.72)triggerEvent(g);
+    addParticle(Math.abs(catWalk.pos)<.3?'ent':'tunnel',g);
+    catWalk.nextPaw=now+rr(2300,850);
+  }
+
+  if(!catWalk._lastMix || now-catWalk._lastMix>140){
+    catWalk._lastMix=now;
+    applyMix();
+  }
+}
+
 function randomPitch(g){
   const base=g==='A'?55:73.42;
   const pool=[1,1.125,1.25,1.333,1.5,1.667,2];
-  return base*pool[Math.floor(Math.random()*pool.length)]*Math.pow(2,rr(.035,-.035));
+  let walkShift=0;
+  if(catWalk.on){
+    const affinity=catWalkAffinity(g);
+    walkShift=(affinity-.5)*.16;
+    if(affinity>.78 && Math.random()<.18)walkShift+=Math.random()>.5?.5:-.5;
+  }
+  return base*pool[Math.floor(Math.random()*pool.length)]*
+    Math.pow(2,rr(.035,-.035)+walkShift);
 }
 function connectSource(node,g){
   const pan=ctx.createStereoPanner();
@@ -606,7 +667,8 @@ function fireTunneling(g,freq){
   }
 }
 function fireEntanglement(sourceG,freq){
-  const e=p.entanglement/100;
+  let e=p.entanglement/100;
+  if(catWalk.on)e=clamp(e+(1-Math.abs(catWalk.pos))*.38);
   const power=Math.pow(e,1.2);
   if(Math.random()>Math.min(1,.05+power*1.12))return;
 
@@ -716,6 +778,10 @@ function rebuildGen(g){
     if(p[g].type==='DUST')wait=rr(760,70);
     if(p[g].type==='GHOST')wait=rr(5200,700);
     wait*=rr(1.22,.78);
+    if(catWalk.on){
+      const affinity=catWalkAffinity(g);
+      wait*=1.32-affinity*.78;
+    }
     obj.timer=setTimeout(()=>{
       triggerEvent(g);
       schedule();
@@ -737,11 +803,19 @@ function driftDrone(g){
 }
 function applyMix(){
   if(!ctx)return;
-  const sup=p.superposition/100;
-  const tun=p.tunneling/100;
-  const dec=p.decoherence/100;
+  let sup=p.superposition/100;
+  let tun=p.tunneling/100;
+  let dec=p.decoherence/100;
   const echo=p.echo/100;
   const hall=p.hall/100;
+
+  if(catWalk.on){
+    const edge=Math.abs(catWalk.pos);
+    const centre=1-edge;
+    sup=clamp(sup + centre*.30);
+    tun=clamp(tun + edge*.38);
+    dec=clamp(dec + (.06+.10*Math.abs(catWalk.bob)));
+  }
 
   const supPower=Math.pow(sup,1.35);
   const tunPower=Math.pow(tun,1.3);
@@ -849,6 +923,23 @@ $('audioBtn').onclick=async()=>{
   }
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
 };
+
+$('catWalkBtn').onclick=async()=>{
+  await startAudio();
+  catWalk.on=!catWalk.on;
+  $('catWalkBtn').classList.toggle('on',catWalk.on);
+  $('catWalkBtn').textContent=catWalk.on?'CAT WALK ●':'CAT WALK';
+  if(catWalk.on){
+    catWalk.nextTarget=0;
+    catWalk.nextPaw=performance.now()+500;
+    flashField('entanglement',p.entanglement);
+  }else{
+    catWalk.target=0;
+    catWalk.pos=0;
+    applyMix();
+  }
+};
+
 $('reroll').onclick=async()=>{
   await startAudio();
   collapseNow();
@@ -1006,6 +1097,12 @@ function drawBox(){
   x.save();
   const catScale=Math.min(1.42, Math.max(.86,(h-48)/128));
   x.translate(w/2,h/2+8);
+  if(catWalk.on){
+    const roamX=catWalk.pos*(w*.19)/catScale;
+    const roamY=(catWalk.bob*4 + Math.sin(performance.now()*.006)*2)/catScale;
+    x.translate(roamX,roamY);
+    x.rotate(Math.sin(performance.now()*.0037)*.025);
+  }
   x.scale(catScale,catScale);
   if(!observed){
     drawCat(x,-18,.92,false,'#0808e8');
@@ -1255,6 +1352,7 @@ function drawCircuit(){
   circuitSignals=circuitSignals.filter(s=>s.life>0&&s.t<1.05);
 }
 function animate(){
+  updateCatWalk(performance.now());
   drawCircuit();
   drawEye();
   drawBox();
