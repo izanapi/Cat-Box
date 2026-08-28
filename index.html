@@ -1141,15 +1141,17 @@ async function startAudio(){
 }
 $('audioBtn').onclick=async()=>{
   initAudio();
-  if(ctx.state==='running'){
-    await /* keep AudioContext running so ECHO/HALL tails can decay */started=false;
+  if(started){
+    // Stop new generator activity, but keep the AudioContext and spatial FX alive.
+    started=false;
     stopSourcesKeepTails();
     $('audioBtn').textContent='▶ PLAY';
     $('audioBtn').classList.remove('running');
   }else{
-    await ctx.resume();
+    if(ctx.state!=='running')await ctx.resume();
     uiTimeOrigin=performance.now();
     started=true;
+    ['A','B'].forEach(g=>scheduleGenerator(g));
     $('audioBtn').textContent='■ STOP';
     $('audioBtn').classList.add('running');
   }
