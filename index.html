@@ -346,7 +346,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
 const $=id=>document.getElementById(id);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rr=(a,b)=>b+Math.random()*(a-b);
-const TYPES=['PLUCK','DUST','GHOST','DRONE'];
+const TYPES=['PLUCK','DUST','WAVE','DRONE'];
 
 let ctx=null,master,limiter,dryBus,dryFilter,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
 let started=false,observeTimer=null;
@@ -592,7 +592,7 @@ function scheduleTone(freq,amp,dur,g,when=0,type='sine',detune=0){
 }
 function scheduleNoise(g,kind='dust',when=0){
   const t=ctx.currentTime+when;
-  const dur=kind==='ghost'?rr(2.2,.45):rr(.11,.018);
+  const dur=kind==='wave'?rr(2.2,.45):rr(.11,.018);
   const n=Math.max(64,Math.floor(ctx.sampleRate*dur));
   const b=ctx.createBuffer(1,n,ctx.sampleRate);
   const d=b.getChannelData(0);
@@ -603,12 +603,12 @@ function scheduleNoise(g,kind='dust',when=0){
   const f=ctx.createBiquadFilter();
   const gain=ctx.createGain();
 
-  f.type=kind==='ghost'?'lowpass':'bandpass';
-  f.frequency.value=kind==='ghost'?rr(1800,160):rr(7800,700);
-  f.Q.value=kind==='ghost'?rr(2,.3):rr(12,1);
+  f.type=kind==='wave'?'lowpass':'bandpass';
+  f.frequency.value=kind==='wave'?rr(1800,160):rr(7800,700);
+  f.Q.value=kind==='wave'?rr(2,.3):rr(12,1);
 
   gain.gain.setValueAtTime(.0001,t);
-  gain.gain.exponentialRampToValueAtTime(kind==='ghost'?rr(.08,.02):rr(.11,.025),t+.01);
+  gain.gain.exponentialRampToValueAtTime(kind==='wave'?rr(.08,.02):rr(.11,.025),t+.01);
   gain.gain.exponentialRampToValueAtTime(.0001,t+dur);
 
   src.connect(f).connect(gain);
@@ -687,7 +687,7 @@ function fireEntanglement(sourceG,freq){
       scheduleNoise(other,'dust',when);
       if(power>.72)scheduleNoise(other,'dust',when+rr(.11,.025));
     }
-    if(type==='GHOST')scheduleNoise(other,'ghost',when);
+    if(type==='WAVE')scheduleNoise(other,'ghost',when);
     if(type==='DRONE'&&gens[other]?.gain){
       const tt=ctx.currentTime+when;
       gens[other].gain.gain.setTargetAtTime(.07+.075*power,tt,.025);
@@ -722,11 +722,11 @@ function triggerEvent(g){
     fireTunneling(g,freq);
     fireEntanglement(g,freq);
   }
-  if(type==='GHOST'){
+  if(type==='WAVE'){
     scheduleNoise(g,'ghost',0);
     if(Math.random()<Math.pow(p.superposition/100,1.05)){
       const n=1+Math.floor(Math.pow(p.superposition/100,1.45)*3);
-      for(let i=0;i<n;i++)scheduleNoise(g,'ghost',rr(.25+.7*p.superposition/100,.06)+i*.12);
+      for(let i=0;i<n;i++)scheduleNoise(g,'wave',rr(.25+.7*p.superposition/100,.06)+i*.12);
     }
     fireTunneling(g,freq);
     fireEntanglement(g,freq);
@@ -776,7 +776,7 @@ function rebuildGen(g){
     let wait=1000;
     if(p[g].type==='PLUCK')wait=rr(1900,260);
     if(p[g].type==='DUST')wait=rr(760,70);
-    if(p[g].type==='GHOST')wait=rr(5200,700);
+    if(p[g].type==='WAVE')wait=rr(2600,850);
     wait*=rr(1.22,.78);
     if(catWalk.on){
       const affinity=catWalkAffinity(g);
@@ -1185,7 +1185,7 @@ function drawWave(g){
       yv=r>.91 ? (hash(cell+37)*2-1)*(.45+.35*v.hit) : 0;
     }
 
-    if(t==='GHOST'){
+    if(t==='WAVE'){
       // two slow waves drift through one another
       const a=Math.sin(q*Math.PI*3.1+v.ghostPhase);
       const b=Math.sin(q*Math.PI*8.7-v.ghostPhase*.63)*.27;
