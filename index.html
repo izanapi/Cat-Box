@@ -622,7 +622,7 @@ function scheduleNoise(g,kind='dust',when=0){
   const t=ctx.currentTime+when;
 
   if(kind==='wave'){
-    const dur=rr(6.5,3.2);
+    const dur=rr(17.0,10.0);
     const n=Math.max(64,Math.floor(ctx.sampleRate*dur));
     const b=ctx.createBuffer(1,n,ctx.sampleRate);
     const d=b.getChannelData(0);
@@ -638,7 +638,7 @@ function scheduleNoise(g,kind='dust',when=0){
     lp.frequency.value=rr(2400,900);
     lp.Q.value=rr(.8,.15);
     const bodyGain=ctx.createGain();
-    const peak=rr(.09,.045);
+    const peak=rr(.045,.0225);
     bodyGain.gain.setValueAtTime(.0001,t);
     bodyGain.gain.linearRampToValueAtTime(peak*.45,t+dur*.18);
     bodyGain.gain.linearRampToValueAtTime(peak,t+dur*.38);
@@ -694,20 +694,20 @@ function fireSuperposition(g,freq,baseAmp=.11){
   if(Math.random()>Math.min(1,.08+power*1.08))return;
 
   // At the far right this becomes an obvious cloud of parallel states.
-  const copies=1+Math.floor(power*6);
+  const copies=1+Math.floor(power*11);
   const ratios=[.5,.667,.75,1,1.25,1.5,2,3];
   for(let i=0;i<copies;i++){
     const ratio=ratios[Math.floor(Math.random()*ratios.length)];
-    const delayT=rr(.10+.34*power,.012)*(i+1);
-    const amp=baseAmp*(.34+.34*power)/Math.sqrt(i+1);
+    const delayT=rr(.16+.72*power,.008)*(i+1);
+    const amp=baseAmp*(.36+.50*power)/Math.pow(i+1,.42);
     scheduleTone(
       freq*ratio,
       amp,
-      rr(.55+1.15*power,.16),
+      rr(.65+2.1*power,.12),
       g,
       delayT,
       Math.random()>.55?'triangle':'sine',
-      rr(18+80*power,-18-80*power)
+      rr(24+210*power,-24-210*power)
     );
     addParticle('super',g);
   }
@@ -718,19 +718,19 @@ function fireTunneling(g,freq){
   if(Math.random()>Math.min(1,.06+power*1.1))return;
 
   // Higher values create unmistakable bursts that jump in time and octave.
-  const jumps=1+Math.floor(power*7);
-  const ratios=[.25,.5,.75,1.5,2,3,4];
+  const jumps=1+Math.floor(power*13);
+  const ratios=[.125,.25,.333,.5,.75,1.5,2,3,4,6,8];
   for(let i=0;i<jumps;i++){
-    const when=rr(.18+1.05*(1-power),.035)+i*rr(.24,.055);
+    const when=rr(.10+1.8*(1-power),.018)+i*rr(.34,.025);
     const ratio=ratios[Math.floor(Math.random()*ratios.length)];
     if(Math.random()>.22){
       scheduleTone(
         freq*ratio,
-        .035+.075*power,
-        rr(.22+.55*power,.055),
+        .028+.095*power,
+        rr(.15+1.05*power,.035),
         g,when,
         Math.random()>.65?'square':'sine',
-        rr(45+120*power,-45-120*power)
+        rr(60+260*power,-60-260*power)
       );
     }else{
       scheduleNoise(g,'dust',when);
@@ -747,13 +747,13 @@ function fireEntanglement(sourceG,freq){
   const other=sourceG==='A'?'B':'A';
   if(!p[other].on)return;
   const type=p[other].type;
-  const links=1+Math.floor(power*3);
+  const links=1+Math.floor(power*7);
 
   for(let i=0;i<links;i++){
-    const when=rr(.10+.30*(1-power),.018)+i*rr(.18,.045);
+    const when=rr(.06+.22*(1-power),.012)+i*rr(.13,.02);
     if(type==='PLUCK'){
       const ratio=[.5,.75,1.5,2][Math.floor(Math.random()*4)];
-      scheduleTone(freq*ratio,.055+.08*power,rr(.55+1.0*power,.15),other,when,'triangle',rr(55,-55));
+      scheduleTone(freq*ratio,.05+.105*power,rr(.55+1.8*power,.10),other,when,Math.random()>.68?'square':'triangle',rr(140+160*power,-140-160*power));
     }
     if(type==='DUST'){
       scheduleNoise(other,'dust',when);
@@ -848,7 +848,7 @@ function rebuildGen(g){
     let wait=1000;
     if(p[g].type==='PLUCK')wait=rr(1900,260);
     if(p[g].type==='DUST')wait=rr(760,70);
-    if(p[g].type==='WAVE')wait=rr(4200,1900);
+    if(p[g].type==='WAVE')wait=rr(12500,7000);
     wait*=rr(1.22,.78);
     if(catWalk.on){
       const affinity=catWalkAffinity(g);
@@ -894,25 +894,27 @@ function applyMix(){
   const decPower=Math.pow(dec,1.4);
 
   // SUPERPOSITION increasingly trades the single dry state for its copies.
-  dryBus.gain.setTargetAtTime(.96-supPower*.34,ctx.currentTime,.08);
+  dryBus.gain.setTargetAtTime(Math.max(.10,.96-supPower*.82-decPower*.10),ctx.currentTime,.055);
 
   // Keep a healthy send so quantum FX remain audible even when traditional FX are low.
-  fxBus.gain.setTargetAtTime(.78+supPower*.12,ctx.currentTime,.08);
+  fxBus.gain.setTargetAtTime(.78+supPower*.46+tunPower*.22,ctx.currentTime,.055);
 
   // ECHO remains a conventional control, but TUNNELING can stretch its time topology.
-  delay.delayTime.setTargetAtTime(.08+echo*.48+tunPower*.58,ctx.currentTime,.08);
-  feedback.gain.setTargetAtTime(clamp(.06+echo*.66+decPower*.16,0,.91),ctx.currentTime,.08);
-  echoWet.gain.setTargetAtTime(echo*.78,ctx.currentTime,.06);
+  delay.delayTime.setTargetAtTime(.025+echo*.54+tunPower*1.34,ctx.currentTime,.045);
+  feedback.gain.setTargetAtTime(clamp(.05+echo*.66+tunPower*.24+decPower*.23,0,.94),ctx.currentTime,.045);
+  echoWet.gain.setTargetAtTime(clamp(echo*.78+tunPower*.54,0,1.05),ctx.currentTime,.045);
 
   // DECOHERENCE now destroys information in both dry and delayed paths.
   // 0 = nearly transparent. 100 = narrow, blurred, unstable-looking bandwidth.
-  const dryCut=18000-Math.pow(dec,1.18)*17400;
-  dryFilter.frequency.setTargetAtTime(Math.max(520,dryCut),ctx.currentTime,.08);
-  dryFilter.Q.setTargetAtTime(.15+decPower*7.5,ctx.currentTime,.08);
+  const dryCut=18000-Math.pow(dec,1.08)*17820;
+  dryFilter.type=dec>.76?'bandpass':'lowpass';
+  dryFilter.frequency.setTargetAtTime(Math.max(180,dryCut),ctx.currentTime,.045);
+  dryFilter.Q.setTargetAtTime(.15+decPower*15.5,ctx.currentTime,.045);
 
-  const echoCut=7600-Math.pow(dec,1.08)*7100;
-  filter.frequency.setTargetAtTime(Math.max(420,echoCut),ctx.currentTime,.08);
-  filter.Q.setTargetAtTime(.4+decPower*8.5,ctx.currentTime,.08);
+  const echoCut=7600-Math.pow(dec,1.02)*7350;
+  filter.type=dec>.82?'bandpass':'lowpass';
+  filter.frequency.setTargetAtTime(Math.max(250,echoCut),ctx.currentTime,.045);
+  filter.Q.setTargetAtTime(.4+decPower*17.0,ctx.currentTime,.045);
 
   // HALL stays independent.
   revGain.gain.setTargetAtTime(hall*.78,ctx.currentTime,.08);
@@ -1216,7 +1218,7 @@ function drawWave(g){
   else v.hit=Math.max(0,v.hit-dt/2200);
   v.last=now;
 
-  v.ghostPhase += .0065;
+  v.ghostPhase += .0022;
   v.dronePhase += .0032;
 
   // faint center line
@@ -1261,7 +1263,7 @@ function drawWave(g){
       // two slow waves drift through one another
       const a=Math.sin(q*Math.PI*3.1+v.ghostPhase);
       const b=Math.sin(q*Math.PI*8.7-v.ghostPhase*.63)*.27;
-      const breath=.52+.15*Math.sin(now*.0011+(g==='A'?0:1.4));
+      const breath=.52+.15*Math.sin(now*.00042+(g==='A'?0:1.4));
       yv=(a+b)*breath*(.78+.22*v.hit);
     }
 
@@ -1302,8 +1304,8 @@ function drawField(){
 
   // SUPERPOSITION: overlapping alternate states.
   if(s>.01){
-    const rings=1+Math.floor(s*6);
-    const spread=3+s*18;
+    const rings=1+Math.floor(s*11);
+    const spread=3+s*42;
     for(let i=0;i<rings;i++){
       const phase=now*(.18+.08*i)+i*1.7;
       const cx=w*.5+Math.sin(phase)*spread;
@@ -1318,7 +1320,7 @@ function drawField(){
 
   // TUNNELING: visible gaps / portals across the field.
   if(t>.01){
-    const portals=1+Math.floor(t*5);
+    const portals=1+Math.floor(t*10);
     for(let i=0;i<portals;i++){
       const yy=((i+1)/(portals+1))*h + Math.sin(now*1.4+i)*3;
       const jump=w*(.16+.68*((Math.sin(now*.43+i*2.2)+1)/2));
@@ -1338,14 +1340,14 @@ function drawField(){
 
   // DECOHERENCE: clean information breaks into noisy fragments.
   if(d>.01){
-    const grains=Math.floor(8+d*72);
+    const grains=Math.floor(8+d*190);
     x.lineWidth=.6;
     for(let i=0;i<grains;i++){
       const seed=i*91.73;
       const gx=(Math.sin(seed+now*(.35+d*3.5))*43758.5453)%1;
       const gy=(Math.sin(seed*1.7+now*(.23+d*2.7))*24634.6345)%1;
       const px=Math.abs(gx)*w, py=Math.abs(gy)*h;
-      const len=.5+d*5;
+      const len=.5+d*13;
       x.globalAlpha=.015+d*.16;
       x.strokeStyle=i%4===0?quantumPink:quantumBlue;
       x.beginPath();x.moveTo(px-len,py);x.lineTo(px+len,py+Math.sin(seed)*d*4);x.stroke();
@@ -1373,7 +1375,7 @@ function drawField(){
 
   // ENTANGLEMENT: pair states with visible links.
   if(e>.02 && particles.length>1){
-    const maxLinks=Math.min(12,1+Math.floor(e*11));
+    const maxLinks=Math.min(32,1+Math.floor(e*31));
     let links=0;
     for(let i=0;i<particles.length && links<maxLinks;i++){
       const a=particles[i];
@@ -1383,7 +1385,7 @@ function drawField(){
         const b=particles[j],dx=a.x-b.x,dy=a.y-b.y,dist=dx*dx+dy*dy;
         if(dist<bestDist){best=b;bestDist=dist;}
       }
-      if(best && bestDist<Math.pow(70+e*180,2)){
+      if(best && bestDist<Math.pow(70+e*340,2)){
         x.globalAlpha=.035+e*.22;
         x.strokeStyle=links%2?quantumPink:quantumBlue;
         x.lineWidth=.6+e*.55;
@@ -1391,6 +1393,41 @@ function drawField(){
         x.beginPath();x.moveTo(a.x,a.y);x.lineTo(best.x,best.y);x.stroke();
         x.setLineDash([]);links++;
       }
+    }
+  }
+
+
+  // Combined quantum overload: when several controls are high, the field itself fractures.
+  const overload=(s+t+d+e)/4;
+  if(overload>.42){
+    const chaos=Math.pow((overload-.42)/.58,1.35);
+    const fractures=2+Math.floor(chaos*15);
+    for(let i=0;i<fractures;i++){
+      const yy=((i+.5)/fractures)*h + Math.sin(now*(1.1+chaos*5)+i*2.3)*h*.11*chaos;
+      x.globalAlpha=.035+chaos*.30;
+      x.strokeStyle=i%3===0?quantumPink:quantumBlue;
+      x.lineWidth=.7+chaos*2.1;
+      x.beginPath();
+      let px=0;
+      x.moveTo(px,yy);
+      const steps=5+Math.floor(chaos*8);
+      for(let k=1;k<=steps;k++){
+        px=w*k/steps;
+        const py=yy+Math.sin(i*9.17+k*4.31+now*(2+chaos*8))*chaos*(4+18*Math.random());
+        x.lineTo(px,py);
+      }
+      x.stroke();
+    }
+
+    // Horizontal displaced blocks emulate a field tearing apart.
+    const slices=Math.floor(chaos*9);
+    for(let i=0;i<slices;i++){
+      const sy=((Math.sin(i*17.3+now*(1.4+chaos*6))+1)/2)*h;
+      const sw=w*(.12+Math.random()*.42);
+      const sx=Math.random()*(w-sw);
+      x.globalAlpha=.025+chaos*.13;
+      x.fillStyle=i%2?quantumPink:quantumBlue;
+      x.fillRect(sx,sy,sw,1+chaos*3);
     }
   }
 
