@@ -374,7 +374,7 @@ html,body{
 const $=id=>document.getElementById(id);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rr=(a,b)=>b+Math.random()*(a-b);
-const TYPES=['PLUCK','DUST','WAVE','DRONE'];
+const TYPES=['PLUCK','DUST','WAVE','SINE','MEOW','DRONE'];
 
 let ctx=null,master,limiter,dryBus,dryFilter,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
 let started=false,observeTimer=null;
@@ -405,6 +405,7 @@ const catWalk={
   lastFrame:performance.now(),
   nextTarget:0,
   nextPaw:0,
+  nextFx:0,
   bob:0
 };
 const fxHelp={
@@ -578,6 +579,37 @@ function updateCatWalk(now){
     catWalk.nextPaw=now+rr(2300,850);
   }
 
+  if(started && now>catWalk.nextFx){
+    const edge=Math.abs(catWalk.pos);
+    const centre=1-edge;
+    const direction=catWalk.pos<0?-1:1;
+
+    // The cat physically tampers with the quantum controls.
+    const changes={
+      superposition: rr(5.5,-2.5) + centre*3.2,
+      tunneling: rr(5.0,-2.0) + edge*3.4,
+      decoherence: rr(4.2,-2.2) + Math.abs(catWalk.bob)*2.6,
+      entanglement: rr(5.5,-2.2) + centre*4.0 + direction*rr(1.2,-1.2)
+    };
+
+    const map={
+      superposition:['super','superV'],
+      tunneling:['tunnel','tunnelV'],
+      decoherence:['deco','decoV'],
+      entanglement:['ent','entV']
+    };
+
+    Object.entries(changes).forEach(([key,delta])=>{
+      p[key]=Math.round(clamp(p[key]+delta,0,100));
+      const [id,out]=map[key];
+      $(id).value=p[key];
+      $(out).textContent=p[key];
+    });
+
+    addParticle(centre>.55?'ent':edge>.55?'tunnel':'super',catWalk.pos<0?'A':'B');
+    catWalk.nextFx=now+rr(1450,650);
+  }
+
   if(!catWalk._lastMix || now-catWalk._lastMix>140){
     catWalk._lastMix=now;
     applyMix();
@@ -638,7 +670,7 @@ function scheduleNoise(g,kind='dust',when=0){
     lp.frequency.value=rr(2400,900);
     lp.Q.value=rr(.8,.15);
     const bodyGain=ctx.createGain();
-    const peak=rr(.045,.0225);
+    const peak=rr(.0225,.01125);
     bodyGain.gain.setValueAtTime(.0001,t);
     bodyGain.gain.linearRampToValueAtTime(peak*.45,t+dur*.18);
     bodyGain.gain.linearRampToValueAtTime(peak,t+dur*.38);
@@ -688,6 +720,82 @@ function scheduleNoise(g,kind='dust',when=0){
   src.start(t);
   src.stop(t+dur+.05);
 }
+
+function scheduleSine(g,freq,when=0){
+  const t=ctx.currentTime+when;
+  const dur=rr(5.8,2.4);
+  const o=ctx.createOscillator();
+  const gain=ctx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(freq,t);
+  o.frequency.exponentialRampToValueAtTime(freq*rr(1.06,.96),t+dur);
+
+  const peak=rr(.060,.028);
+  gain.gain.setValueAtTime(.0001,t);
+  gain.gain.linearRampToValueAtTime(peak,t+dur*.28);
+  gain.gain.setValueAtTime(peak,t+dur*.54);
+  gain.gain.exponentialRampToValueAtTime(.0001,t+dur);
+
+  o.connect(gain);
+  connectSource(gain,g);
+  o.start(t);
+  o.stop(t+dur+.05);
+}
+
+function scheduleMeow(g,freq,when=0){
+  const t=ctx.currentTime+when;
+  const dur=rr(1.55,.72);
+
+  const carrier=ctx.createOscillator();
+  const harmonic=ctx.createOscillator();
+  const cg=ctx.createGain();
+  const hg=ctx.createGain();
+  const mix=ctx.createGain();
+  const formant=ctx.createBiquadFilter();
+
+  carrier.type='triangle';
+  harmonic.type='sine';
+
+  const start=freq*rr(2.9,2.0);
+  const top=start*rr(1.72,1.28);
+  const end=start*rr(.92,.56);
+
+  carrier.frequency.setValueAtTime(start,t);
+  carrier.frequency.exponentialRampToValueAtTime(top,t+dur*.34);
+  carrier.frequency.exponentialRampToValueAtTime(end,t+dur);
+
+  harmonic.frequency.setValueAtTime(start*2.02,t);
+  harmonic.frequency.exponentialRampToValueAtTime(top*2.0,t+dur*.34);
+  harmonic.frequency.exponentialRampToValueAtTime(end*1.98,t+dur);
+
+  // Slight vocal wobble.
+  carrier.detune.setValueAtTime(rr(18,-18),t);
+  carrier.detune.linearRampToValueAtTime(rr(42,-42),t+dur*.55);
+  carrier.detune.linearRampToValueAtTime(rr(16,-16),t+dur);
+
+  cg.gain.value=.82;
+  hg.gain.value=.16;
+  mix.gain.setValueAtTime(.0001,t);
+  const peak=rr(.075,.035);
+  mix.gain.linearRampToValueAtTime(peak,t+dur*.08);
+  mix.gain.setValueAtTime(peak*.92,t+dur*.42);
+  mix.gain.exponentialRampToValueAtTime(.0001,t+dur);
+
+  formant.type='bandpass';
+  formant.frequency.setValueAtTime(rr(1150,760),t);
+  formant.frequency.linearRampToValueAtTime(rr(1700,980),t+dur*.38);
+  formant.frequency.linearRampToValueAtTime(rr(980,620),t+dur);
+  formant.Q.value=rr(2.6,1.4);
+
+  carrier.connect(cg).connect(formant);
+  harmonic.connect(hg).connect(formant);
+  formant.connect(mix);
+  connectSource(mix,g);
+
+  carrier.start(t); harmonic.start(t);
+  carrier.stop(t+dur+.05); harmonic.stop(t+dur+.05);
+}
+
 function fireSuperposition(g,freq,baseAmp=.11){
   const s=p.superposition/100;
   const power=Math.pow(s,1.35);
@@ -760,6 +868,12 @@ function fireEntanglement(sourceG,freq){
       if(power>.72)scheduleNoise(other,'dust',when+rr(.11,.025));
     }
     if(type==='WAVE')scheduleNoise(other,'wave',when);
+    if(type==='SINE'){
+      scheduleSine(other,freq*[.5,.75,1,1.5,2][Math.floor(Math.random()*5)],when);
+    }
+    if(type==='MEOW'){
+      scheduleMeow(other,freq*[.5,.75,1,1.5][Math.floor(Math.random()*4)],when);
+    }
     if(type==='DRONE'&&gens[other]?.gain){
       const tt=ctx.currentTime+when;
       gens[other].gain.gain.setTargetAtTime(.07+.075*power,tt,.025);
@@ -799,6 +913,20 @@ function triggerEvent(g){
     if(Math.random()<Math.pow(p.superposition/100,1.05)){
       const n=1+Math.floor(Math.pow(p.superposition/100,1.45)*3);
       for(let i=0;i<n;i++)scheduleNoise(g,'wave',rr(.25+.7*p.superposition/100,.06)+i*.12);
+    }
+    fireTunneling(g,freq);
+    fireEntanglement(g,freq);
+  }
+  if(type==='SINE'){
+    scheduleSine(g,freq,0);
+    fireSuperposition(g,freq,.065);
+    fireTunneling(g,freq);
+    fireEntanglement(g,freq);
+  }
+  if(type==='MEOW'){
+    scheduleMeow(g,freq,0);
+    if(Math.random()<p.superposition/100*.72){
+      scheduleMeow(g,freq*rr(1.5,.72),rr(.42,.10));
     }
     fireTunneling(g,freq);
     fireEntanglement(g,freq);
@@ -849,6 +977,8 @@ function rebuildGen(g){
     if(p[g].type==='PLUCK')wait=rr(1900,260);
     if(p[g].type==='DUST')wait=rr(760,70);
     if(p[g].type==='WAVE')wait=rr(12500,7000);
+    if(p[g].type==='SINE')wait=rr(5200,1500);
+    if(p[g].type==='MEOW')wait=rr(7600,2100);
     wait*=rr(1.22,.78);
     if(catWalk.on){
       const affinity=catWalkAffinity(g);
@@ -1006,6 +1136,7 @@ $('catWalkBtn').onclick=async()=>{
   if(catWalk.on){
     catWalk.nextTarget=0;
     catWalk.nextPaw=performance.now()+500;
+    catWalk.nextFx=performance.now()+700;
     flashField('entanglement',p.entanglement);
   }else{
     catWalk.target=0;
@@ -1215,6 +1346,8 @@ function drawWave(g){
   // decay the little visual excitation caused by real note events
   const dt=Math.max(0,now-v.last);
   if(t==='PLUCK')v.hit=Math.max(0,v.hit-dt/900);
+  else if(t==='MEOW')v.hit=Math.max(0,v.hit-dt/1250);
+  else if(t==='SINE')v.hit=Math.max(0,v.hit-dt/4200);
   else v.hit=Math.max(0,v.hit-dt/2200);
   v.last=now;
 
@@ -1265,6 +1398,20 @@ function drawWave(g){
       const b=Math.sin(q*Math.PI*8.7-v.ghostPhase*.63)*.27;
       const breath=.52+.15*Math.sin(now*.00042+(g==='A'?0:1.4));
       yv=(a+b)*breath*(.78+.22*v.hit);
+    }
+
+    if(t==='SINE'){
+      const phase=now*.00125+(g==='A'?0:1.2);
+      const amp=.23+.46*v.hit;
+      yv=Math.sin(q*Math.PI*2.05+phase)*amp;
+    }
+
+    if(t==='MEOW'){
+      const phase=now*.003+(g==='A'?0:1.8);
+      const bend=Math.sin(phase*.67)*1.7;
+      const body=Math.sin(q*Math.PI*(3.4+bend)+phase);
+      const formant=Math.sin(q*Math.PI*(8.8+bend*1.5)-phase*.7)*.23;
+      yv=(body+formant)*(.12+.72*v.hit);
     }
 
     if(t==='DRONE'){
