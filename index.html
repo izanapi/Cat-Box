@@ -246,7 +246,58 @@ html,body{
 
 .jpFx{margin-left:4px;font-size:4.8px;font-weight:400;letter-spacing:.04em;opacity:.58}
 .fxDesc{display:flex;justify-content:space-between;gap:6px}
-.fxDesc span{font-size:4.6px;letter-spacing:.03em;opacity:.48;white-space:nowrap}
+.fxDesc span{font-size:4.6px;letter-spacing:.03em;opacity:.60;white-space:nowrap}
+
+
+.versionTag{
+  position:fixed;
+  left:6px;
+  bottom:4px;
+  z-index:50;
+  font-size:5px;
+  letter-spacing:.08em;
+  opacity:.58;
+  pointer-events:none;
+  color:var(--ink);
+}
+
+
+.brand{
+  display:flex;
+  align-items:baseline;
+  gap:7px;
+}
+.brand span,.brandSub{
+  font-size:5px;
+  font-weight:400;
+  letter-spacing:.12em;
+  opacity:.64;
+  white-space:nowrap;
+}
+
+
+/* Slight readability lift for secondary / intentionally faint UI text. */
+.brand span,.brandSub{
+  opacity:.70 !important;
+}
+.jpFx{
+  opacity:.70 !important;
+}
+.fxDesc span{
+  opacity:.62 !important;
+}
+.fxDesc,
+.sub,
+.meta,
+.note,
+.obsNote,
+.generatorLabel,
+.fieldLabel{
+  opacity:max(.62, var(--unused, .62));
+}
+.versionTag{
+  opacity:.58 !important;
+}
 
 </style>
 </head>
@@ -254,7 +305,7 @@ html,body{
 <canvas id="circuitBG"></canvas>
 <main id="app">
 <header class="topbar">
-  <div class="brand">CAT BOX</div>
+  <div class="brand">CAT BOX<span class="brandSub">QUANTUM SOUND MACHINE</span></div>
   <div class="menu">
     <span class="timeLabel" id="timeLabel">TIME 00:00</span>
     <button class="menuBtn diceBtn" id="reroll" aria-label="Reroll" title="Reroll">⚄</button>
@@ -1802,5 +1853,6 @@ installRangeScrubbers();
 scheduleObserve();
 animate();
 </script>
+<div class="versionTag">VER 1.0</div>
 </body>
 </html>
