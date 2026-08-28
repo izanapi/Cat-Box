@@ -1374,6 +1374,42 @@ updateTimeLabel();
 
 
 
+
+function installRangeScrubbers(){
+  document.querySelectorAll('input[type="range"]').forEach(slider=>{
+    if(slider.dataset.scrubberInstalled)return;
+    slider.dataset.scrubberInstalled='1';
+
+    const setFromPointer=(clientX)=>{
+      const r=slider.getBoundingClientRect();
+      const min=Number(slider.min||0);
+      const max=Number(slider.max||100);
+      const step=Number(slider.step||1);
+      let t=(clientX-r.left)/r.width;
+      t=Math.max(0,Math.min(1,t));
+      let value=min+t*(max-min);
+      value=Math.round((value-min)/step)*step+min;
+      slider.value=value;
+      slider.dispatchEvent(new Event('input',{bubbles:true}));
+    };
+
+    slider.addEventListener('pointerdown',e=>{
+      slider.setPointerCapture?.(e.pointerId);
+      setFromPointer(e.clientX);
+      const move=ev=>setFromPointer(ev.clientX);
+      const end=ev=>{
+        slider.removeEventListener('pointermove',move);
+        slider.removeEventListener('pointerup',end);
+        slider.removeEventListener('pointercancel',end);
+      };
+      slider.addEventListener('pointermove',move);
+      slider.addEventListener('pointerup',end);
+      slider.addEventListener('pointercancel',end);
+    });
+  });
+}
+installRangeScrubbers();
+
 scheduleObserve();
 animate();
 </script>
