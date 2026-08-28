@@ -218,8 +218,8 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
   <div class="brand">CAT BOX</div>
   <div class="menu">
     <span class="timeLabel" id="timeLabel">TIME 00:00</span>
-    <button class="menuBtn" id="reroll">REROLL</button>
-    <button class="menuBtn playBtn" id="audioBtn">PLAY</button>
+    <button class="menuBtn diceBtn" id="reroll" aria-label="Reroll" title="Reroll">⚄</button>
+    <button class="menuBtn playBtn" id="audioBtn">▶ PLAY</button>
   </div>
 </header>
 
@@ -334,7 +334,7 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rr=(a,b)=>b+Math.random()*(a-b);
 const TYPES=['PLUCK','DUST','GHOST','DRONE'];
 
-let ctx=null,master,dryBus,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
+let ctx=null,master,limiter,dryBus,dryFilter,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
 let started=false,observeTimer=null;
 let observed=false,collapse='AB';
 let particles=[];
@@ -413,7 +413,9 @@ function initAudio(){
   ctx=new AC();
 
   master=ctx.createGain();
+  limiter=ctx.createDynamicsCompressor();
   dryBus=ctx.createGain();
+  dryFilter=ctx.createBiquadFilter();
   fxBus=ctx.createGain();
 
   delay=ctx.createDelay(3);
@@ -425,9 +427,13 @@ function initAudio(){
 
   reverb.buffer=makeImpulse(3.4,2.35);
   filter.type='lowpass';
+  dryFilter.type='lowpass';
+  dryFilter.frequency.value=18000;
+  dryFilter.Q.value=.15;
 
-  // Dry path
-  dryBus.connect(master);
+  // Dry path. Decoherence can now erode the source itself.
+  dryBus.connect(dryFilter);
+  dryFilter.connect(master);
 
   // Echo path: independent wet branch
   fxBus.connect(delay);
@@ -442,7 +448,14 @@ function initAudio(){
   reverb.connect(revGain);
   revGain.connect(master);
 
-  master.connect(ctx.destination);
+  // Safety ceiling for the intentionally aggressive FX + fixed +10 dB master boost.
+  limiter.threshold.value=-3;
+  limiter.knee.value=4;
+  limiter.ratio.value=18;
+  limiter.attack.value=.003;
+  limiter.release.value=.16;
+  master.connect(limiter);
+  limiter.connect(ctx.destination);
 
   rebuildGen('A');
   rebuildGen('B');
@@ -544,44 +557,82 @@ function scheduleNoise(g,kind='dust',when=0){
 }
 function fireSuperposition(g,freq,baseAmp=.11){
   const s=p.superposition/100;
-  if(Math.random()>s)return;
-  const copies=1+Math.floor(s*3);
-  const ratios=[.5,.75,1,1.5,2];
+  const power=Math.pow(s,1.35);
+  if(Math.random()>Math.min(1,.08+power*1.08))return;
+
+  // At the far right this becomes an obvious cloud of parallel states.
+  const copies=1+Math.floor(power*6);
+  const ratios=[.5,.667,.75,1,1.25,1.5,2,3];
   for(let i=0;i<copies;i++){
     const ratio=ratios[Math.floor(Math.random()*ratios.length)];
-    const delayT=rr(.23,.025)*(i+1);
-    scheduleTone(freq*ratio,baseAmp*(.42/(i+1)),rr(.8,.18),g,delayT,Math.random()>.7?'triangle':'sine',rr(12,-12));
+    const delayT=rr(.10+.34*power,.012)*(i+1);
+    const amp=baseAmp*(.34+.34*power)/Math.sqrt(i+1);
+    scheduleTone(
+      freq*ratio,
+      amp,
+      rr(.55+1.15*power,.16),
+      g,
+      delayT,
+      Math.random()>.55?'triangle':'sine',
+      rr(18+80*power,-18-80*power)
+    );
     addParticle('super',g);
   }
 }
 function fireTunneling(g,freq){
   const t=p.tunneling/100;
-  if(Math.random()>t)return;
-  const jumps=1+Math.floor(t*3);
+  const power=Math.pow(t,1.25);
+  if(Math.random()>Math.min(1,.06+power*1.1))return;
+
+  // Higher values create unmistakable bursts that jump in time and octave.
+  const jumps=1+Math.floor(power*7);
+  const ratios=[.25,.5,.75,1.5,2,3,4];
   for(let i=0;i<jumps;i++){
-    const when=rr(1.1,.12)*(i+1);
-    const ratio=Math.random()>.5?.5:2;
-    if(Math.random()>.35)scheduleTone(freq*ratio,.045,rr(.5,.08),g,when,'sine',rr(30,-30));
-    else scheduleNoise(g,'dust',when);
+    const when=rr(.18+1.05*(1-power),.035)+i*rr(.24,.055);
+    const ratio=ratios[Math.floor(Math.random()*ratios.length)];
+    if(Math.random()>.22){
+      scheduleTone(
+        freq*ratio,
+        .035+.075*power,
+        rr(.22+.55*power,.055),
+        g,when,
+        Math.random()>.65?'square':'sine',
+        rr(45+120*power,-45-120*power)
+      );
+    }else{
+      scheduleNoise(g,'dust',when);
+    }
     addParticle('tunnel',g);
   }
 }
 function fireEntanglement(sourceG,freq){
   const e=p.entanglement/100;
-  if(Math.random()>e)return;
+  const power=Math.pow(e,1.2);
+  if(Math.random()>Math.min(1,.05+power*1.12))return;
+
   const other=sourceG==='A'?'B':'A';
   if(!p[other].on)return;
   const type=p[other].type;
-  const when=rr(.42,.04);
-  if(type==='PLUCK')scheduleTone(freq*(sourceG==='A'?1.5:.75),.06,rr(.9,.2),other,when,'triangle');
-  if(type==='DUST')scheduleNoise(other,'dust',when);
-  if(type==='GHOST')scheduleNoise(other,'ghost',when);
-  if(type==='DRONE'&&gens[other]?.gain){
-    const t=ctx.currentTime+when;
-    gens[other].gain.gain.setTargetAtTime(.075,t,.05);
-    gens[other].gain.gain.setTargetAtTime(.035,t+.4,.35);
+  const links=1+Math.floor(power*3);
+
+  for(let i=0;i<links;i++){
+    const when=rr(.10+.30*(1-power),.018)+i*rr(.18,.045);
+    if(type==='PLUCK'){
+      const ratio=[.5,.75,1.5,2][Math.floor(Math.random()*4)];
+      scheduleTone(freq*ratio,.055+.08*power,rr(.55+1.0*power,.15),other,when,'triangle',rr(55,-55));
+    }
+    if(type==='DUST'){
+      scheduleNoise(other,'dust',when);
+      if(power>.72)scheduleNoise(other,'dust',when+rr(.11,.025));
+    }
+    if(type==='GHOST')scheduleNoise(other,'ghost',when);
+    if(type==='DRONE'&&gens[other]?.gain){
+      const tt=ctx.currentTime+when;
+      gens[other].gain.gain.setTargetAtTime(.07+.075*power,tt,.025);
+      gens[other].gain.gain.setTargetAtTime(.035,tt+.25+.45*power,.22);
+    }
+    addParticle('ent',other);
   }
-  addParticle('ent',other);
 }
 function triggerEvent(g){
   if(!ctx||!started||!p[g].on)return;
@@ -602,13 +653,19 @@ function triggerEvent(g){
   }
   if(type==='DUST'){
     scheduleNoise(g,'dust',0);
-    if(Math.random()<p.superposition/100*.6)scheduleNoise(g,'dust',rr(.4,.05));
+    if(Math.random()<Math.pow(p.superposition/100,1.1)){
+      const n=1+Math.floor(Math.pow(p.superposition/100,1.4)*4);
+      for(let i=0;i<n;i++)scheduleNoise(g,'dust',rr(.16+.42*p.superposition/100,.025)+i*.035);
+    }
     fireTunneling(g,freq);
     fireEntanglement(g,freq);
   }
   if(type==='GHOST'){
     scheduleNoise(g,'ghost',0);
-    if(Math.random()<p.superposition/100*.7)scheduleNoise(g,'ghost',rr(.7,.12));
+    if(Math.random()<Math.pow(p.superposition/100,1.05)){
+      const n=1+Math.floor(Math.pow(p.superposition/100,1.45)*3);
+      for(let i=0;i<n;i++)scheduleNoise(g,'ghost',rr(.25+.7*p.superposition/100,.06)+i*.12);
+    }
     fireTunneling(g,freq);
     fireEntanglement(g,freq);
   }
@@ -686,34 +743,46 @@ function applyMix(){
   const echo=p.echo/100;
   const hall=p.hall/100;
 
-  dryBus.gain.setTargetAtTime(.92-sup*.18,ctx.currentTime,.08);
+  const supPower=Math.pow(sup,1.35);
+  const tunPower=Math.pow(tun,1.3);
+  const decPower=Math.pow(dec,1.4);
 
-  // Source send stays stable. Echo and Hall have their own wet gains.
-  fxBus.gain.setTargetAtTime(.72,ctx.currentTime,.08);
+  // SUPERPOSITION increasingly trades the single dry state for its copies.
+  dryBus.gain.setTargetAtTime(.96-supPower*.34,ctx.currentTime,.08);
 
-  // ECHO: time + feedback + wet level
-  delay.delayTime.setTargetAtTime(.12+tun*.24+echo*.36,ctx.currentTime,.1);
-  feedback.gain.setTargetAtTime(clamp(.08+dec*.18+echo*.58,0,.86),ctx.currentTime,.1);
-  echoWet.gain.setTargetAtTime(echo*.68,ctx.currentTime,.08);
+  // Keep a healthy send so quantum FX remain audible even when traditional FX are low.
+  fxBus.gain.setTargetAtTime(.78+supPower*.12,ctx.currentTime,.08);
 
-  // Decoherence mainly erodes delayed information.
-  filter.frequency.setTargetAtTime(6800-Math.pow(dec,1.2)*5600,ctx.currentTime,.12);
-  filter.Q.setTargetAtTime(.5+dec*2.1,ctx.currentTime,.12);
+  // ECHO remains a conventional control, but TUNNELING can stretch its time topology.
+  delay.delayTime.setTargetAtTime(.08+echo*.48+tunPower*.58,ctx.currentTime,.08);
+  feedback.gain.setTargetAtTime(clamp(.06+echo*.66+decPower*.16,0,.91),ctx.currentTime,.08);
+  echoWet.gain.setTargetAtTime(echo*.78,ctx.currentTime,.06);
 
-  // HALL: independent convolution wet level.
-  revGain.gain.setTargetAtTime(hall*.72,ctx.currentTime,.1);
+  // DECOHERENCE now destroys information in both dry and delayed paths.
+  // 0 = nearly transparent. 100 = narrow, blurred, unstable-looking bandwidth.
+  const dryCut=18000-Math.pow(dec,1.18)*17400;
+  dryFilter.frequency.setTargetAtTime(Math.max(520,dryCut),ctx.currentTime,.08);
+  dryFilter.Q.setTargetAtTime(.15+decPower*7.5,ctx.currentTime,.08);
+
+  const echoCut=7600-Math.pow(dec,1.08)*7100;
+  filter.frequency.setTargetAtTime(Math.max(420,echoCut),ctx.currentTime,.08);
+  filter.Q.setTargetAtTime(.4+decPower*8.5,ctx.currentTime,.08);
+
+  // HALL stays independent.
+  revGain.gain.setTargetAtTime(hall*.78,ctx.currentTime,.08);
 
   ['A','B'].forEach(g=>{
     const q=gens[g];
     if(q?.gain){
       const allowed=!observed||stateAllows(g);
-      const level=p[g].on&&allowed?.045:.0001;
-      q.gain.gain.setTargetAtTime(level,ctx.currentTime,.24);
+      const level=p[g].on&&allowed ? .045 : .0001;
+      q.gain.gain.setTargetAtTime(level,ctx.currentTime,.18);
     }
   });
+
   const vol=Math.pow(p.volume/100,1.45);
   const masterBoost=Math.pow(10,10/20); // +10 dB
-  master.gain.setTargetAtTime(vol*.92*masterBoost,ctx.currentTime,.05);
+  master.gain.setTargetAtTime(vol*.92*masterBoost,ctx.currentTime,.045);
 }
 function collapseNow(){
   observed=true;
@@ -761,7 +830,7 @@ async function startAudio(){
   if(ctx.state!=='running')await ctx.resume();
   if(!started)uiTimeOrigin=performance.now();
   started=true;
-  $('audioBtn').textContent='STOP';
+  $('audioBtn').textContent='■ STOP';
   $('audioBtn').classList.add('running');
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
 }
@@ -769,13 +838,13 @@ $('audioBtn').onclick=async()=>{
   initAudio();
   if(ctx.state==='running'){
     await ctx.suspend();started=false;
-    $('audioBtn').textContent='PLAY';
+    $('audioBtn').textContent='▶ PLAY';
     $('audioBtn').classList.remove('running');
   }else{
     await ctx.resume();
     uiTimeOrigin=performance.now();
     started=true;
-    $('audioBtn').textContent='STOP';
+    $('audioBtn').textContent='■ STOP';
     $('audioBtn').classList.add('running');
   }
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
