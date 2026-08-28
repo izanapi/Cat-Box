@@ -180,10 +180,10 @@ input[type=range]::-moz-range-thumb{
 .graphPaper{
   background-color:var(--ink);
   background-image:
-    linear-gradient(rgba(8,8,232,.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(8,8,232,.16) 1px, transparent 1px),
-    linear-gradient(rgba(8,8,232,.28) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(8,8,232,.28) 1px, transparent 1px);
+    linear-gradient(rgba(8,8,232,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,8,232,.035) 1px, transparent 1px),
+    linear-gradient(rgba(8,8,232,.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,8,232,.065) 1px, transparent 1px);
   background-size:
     10px 10px,
     10px 10px,
@@ -783,6 +783,8 @@ $('audioBtn').onclick=async()=>{
 $('reroll').onclick=async()=>{
   await startAudio();
   collapseNow();
+
+  // Generator states
   if(Math.random()>.5){
     p.A.type=TYPES[Math.floor(Math.random()*TYPES.length)];
     p.B.type=TYPES[Math.floor(Math.random()*TYPES.length)];
@@ -792,6 +794,22 @@ $('reroll').onclick=async()=>{
       rebuildGen(g);
     });
   }
+
+  // Quantum FX only. ECHO / HALL / VOLUME intentionally stay untouched.
+  [
+    ['super','superposition','superV'],
+    ['tunnel','tunneling','tunnelV'],
+    ['deco','decoherence','decoV'],
+    ['ent','entanglement','entV']
+  ].forEach(([id,key,out])=>{
+    const value=Math.floor(15+Math.random()*76);
+    p[key]=value;
+    $(id).value=value;
+    $(out).textContent=value;
+  });
+
+  applyMix();
+  flashField('superposition',p.superposition);
 };
 
 
@@ -1146,17 +1164,6 @@ function updateTimeLabel(){
 updateTimeLabel();
 
 
-$('reroll').addEventListener('click',()=>{
-  ['superposition','tunneling','decoherence','entanglement'].forEach(name=>{
-    const value=Math.floor(18+Math.random()*70);
-    p[name]=value;
-    const el=$(name);
-    if(el)el.value=value;
-    const out=$(name+'Val');
-    if(out)out.textContent=value;
-  });
-  applyMix();
-});
 
 scheduleObserve();
 animate();
