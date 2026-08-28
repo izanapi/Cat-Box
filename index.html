@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050505">
+<title>CAT BOX — Quantum Audio Instrument</title>
+<style>
+:root{
+  --bg:#050505;--ink:#f4f4ef;--dim:#9a9a94;
+  --line:rgba(244,244,239,.34);--faint:rgba(244,244,239,.10);--glow:rgba(255,255,255,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;color:var(--ink);font-family:"Courier New",ui-monospace,monospace}
+body{-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button,input,select{font:inherit}
+button{touch-action:manipulation}
+#app{
+  width:100%;max-width:520px;min-height:100svh;margin:auto;background:var(--bg);
+  padding:calc(12px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
+  position:relative;overflow:hidden;
+}
+#app:after{
+  content:"";position:fixed;pointer-events:none;inset:0;opacity:.22;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px);
+}
+header{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;margin-bottom:10px}
+.iconBtn,.startBtn{
+  appearance:none;background:transparent;color:var(--ink);border:1px solid var(--line);
+  min-height:42px;border-radius:0;
+}
+.title{text-align:center}
+.title h1{font-weight:400;font-size:21px;letter-spacing:.23em;margin:0 0 3px}
+.title small{font-size:7px;color:var(--dim);letter-spacing:.2em}
+.eyeSmall{font-size:22px}
+.panel{border:1px solid var(--line);position:relative;background:rgba(255,255,255,.006)}
+.panel:before,.panel:after{content:"";position:absolute;width:8px;height:8px;pointer-events:none}
+.panel:before{left:-1px;top:-1px;border-left:1px solid var(--ink);border-top:1px solid var(--ink)}
+.panel:after{right:-1px;bottom:-1px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.micro{font-size:7px;color:var(--dim);letter-spacing:.12em}
+.topState{display:grid;grid-template-columns:1fr 1.2fr;gap:8px;margin-bottom:8px}
+.state,.prob{padding:8px;min-height:78px}
+.label{font-size:8px;letter-spacing:.18em;color:var(--dim)}
+#stateText{font-size:14px;letter-spacing:.14em;margin-top:6px}
+#stateSub{font-size:7px;color:var(--dim);margin-top:8px}
+.prow{display:grid;grid-template-columns:28px 38px 1fr;gap:5px;align-items:center;margin-top:5px;font-size:7px}
+.bar{height:3px;background:var(--faint);position:relative}.bar i{display:block;height:100%;background:var(--ink)}
+#eyeCanvas{width:100%;height:76px;display:block;margin:0 auto 8px;border-top:1px solid var(--faint);border-bottom:1px solid var(--faint)}
+.stage{display:grid;grid-template-columns:1fr 1.08fr 1fr;gap:7px;align-items:stretch}
+.generator{padding:7px;min-width:0}
+.genHead{display:flex;justify-content:space-between;align-items:center;font-size:8px;letter-spacing:.12em;margin-bottom:5px}
+.genOn{width:22px;height:13px;border:1px solid var(--line);background:transparent;position:relative}
+.genOn i{position:absolute;width:7px;height:7px;background:var(--ink);top:2px;left:2px;transition:.15s}
+.genOn.off i{left:11px;background:var(--dim)}
+.wave{width:100%;height:45px;border:1px solid var(--faint);display:block;margin-bottom:6px}
+.type{
+  width:100%;background:transparent;color:var(--ink);border:1px solid var(--line);height:27px;
+  font-size:8px;letter-spacing:.14em;text-align:center;margin-bottom:7px;
+}
+.knobGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 5px}
+.knobWrap{text-align:center;min-width:0}
+.knob{
+  --v:50;appearance:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);
+  background:conic-gradient(from 225deg,var(--ink) calc(var(--v)*2.7deg),transparent 0 270deg,transparent 0);
+  position:relative;margin:auto;display:block;padding:0;
+}
+.knob:after{
+  content:"";position:absolute;inset:4px;border-radius:50%;background:var(--bg);border:1px solid var(--faint)
+}
+.knob:before{
+  content:"";position:absolute;z-index:2;width:1px;height:13px;background:var(--ink);
+  left:50%;top:5px;transform-origin:50% 16px;transform:rotate(calc(-135deg + var(--v)*2.7deg));
+}
+.knobWrap span{display:block;font-size:6px;color:var(--dim);margin-top:3px;letter-spacing:.08em}
+.vol{margin-top:8px}.volRow{display:flex;justify-content:space-between;font-size:6px;color:var(--dim)}
+input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:18px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:7px;height:12px;background:var(--ink);border:0;border-radius:0;margin-top:-6px}
+.centerBox{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+#boxCanvas{width:100%;aspect-ratio:.86;display:block}
+.boxCaption{font-size:6px;color:var(--dim);text-align:center;letter-spacing:.08em;margin-top:2px}
+.observeRow{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:7px;margin:9px 0}
+.miniPanel{padding:7px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:68px}
+.miniPanel strong{font-size:8px;letter-spacing:.11em;font-weight:400}
+.miniPanel span{font-size:7px;color:var(--dim);margin-top:6px}
+#observe{
+  aspect-ratio:1;border-radius:50%;background:transparent;color:var(--ink);border:1px solid var(--ink);
+  font-size:10px;letter-spacing:.18em;box-shadow:0 0 22px var(--glow) inset,0 0 20px var(--glow);
+}
+#observe .eye{font-size:24px;display:block;margin-bottom:3px}
+.autoBtn{appearance:none;background:transparent;color:var(--ink);border:0;font-size:7px}
+.macroPanel{padding:10px 8px 8px}
+.macroGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 6px;align-items:end}
+.macroGrid .big{grid-column:2}
+.macroGrid .big .knob{width:68px;height:68px}
+.macroGrid .big .knob:after{inset:5px}
+.macroGrid .big .knob:before{height:22px;transform-origin:50% 28px}
+.macroTitle{text-align:center;font-size:12px;letter-spacing:.18em;margin-bottom:3px}
+.processor{margin-top:8px;padding:8px}
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.fxblock{border:1px solid var(--faint);padding:6px 2px;text-align:center;min-height:48px}
+.fxblock b{font-weight:400;font-size:6px;letter-spacing:.08em}
+.fxicon{font-size:14px;margin-top:7px;color:var(--dim)}
+.monitors{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.monitor{padding:7px}
+.monitor canvas{width:100%;height:66px;display:block}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.bottom .panel{padding:8px}
+#reroll,#bypass{
+  width:100%;height:42px;background:transparent;border:1px solid var(--line);color:var(--ink);
+  font-size:8px;letter-spacing:.12em;
+}
+footer{display:flex;justify-content:space-between;margin-top:7px;font-size:6px;color:var(--dim);letter-spacing:.08em}
+.activeGlow{box-shadow:0 0 18px rgba(255,255,255,.14) inset}
+@media(max-width:390px){
+  #app{padding-left:9px;padding-right:9px}.stage{gap:5px}.generator{padding:5px}
+  .knob{width:36px;height:36px}.knob:before{height:11px;transform-origin:50% 14px}
+  .macroGrid .big .knob{width:60px;height:60px}
+}
+</style>
+</head>
+<body>
+<main id="app">
+<header>
+  <button class="iconBtn" id="audioBtn">▶</button>
+  <div class="title"><h1>CAT BOX</h1><small>QUANTUM AUDIO INSTRUMENT</small></div>
+  <button class="iconBtn eyeSmall" id="globalObserve">◉</button>
+</header>
+
+<section class="topState">
+  <div class="panel state">
+    <div class="label">STATE</div>
+    <div id="stateText">SUPERPOSITION</div>
+    <div id="stateSub">UNOBSERVED / BOX CLOSED</div>
+  </div>
+  <div class="panel prob">
+    <div class="label">PROBABILITY</div>
+    <div class="prow"><span>P(A)</span><span id="pa">.37</span><div class="bar"><i id="ba"></i></div></div>
+    <div class="prow"><span>P(B)</span><span id="pb">.31</span><div class="bar"><i id="bb"></i></div></div>
+    <div class="prow"><span>P(AB)</span><span id="pab">.22</span><div class="bar"><i id="bab"></i></div></div>
+    <div class="prow"><span>P(Ø)</span><span id="p0">.10</span><div class="bar"><i id="b0"></i></div></div>
+  </div>
+</section>
+
+<canvas id="eyeCanvas" width="460" height="84"></canvas>
+
+<section class="stage">
+  <div class="panel generator" id="genA">
+    <div class="genHead"><span>GENERATOR A</span><button class="genOn" data-gen="A"><i></i></button></div>
+    <canvas class="wave" id="waveA" width="150" height="50"></canvas>
+    <select class="type" id="typeA"><option>SINE</option><option>PULSE</option><option>PLUCK</option><option>NOISE</option><option>DUST</option><option>DRONE</option></select>
+    <div class="knobGrid" id="knobsA"></div>
+    <div class="vol"><div class="volRow"><span>VOL</span><span id="volAVal">55</span></div><input id="volA" type="range" min="0" max="100" value="55"></div>
+  </div>
+
+  <div class="centerBox">
+    <canvas id="boxCanvas" width="220" height="260"></canvas>
+    <div class="boxCaption">観測するまで、状態は確定しない。</div>
+  </div>
+
+  <div class="panel generator" id="genB">
+    <div class="genHead"><span>GENERATOR B</span><button class="genOn" data-gen="B"><i></i></button></div>
+    <canvas class="wave" id="waveB" width="150" height="50"></canvas>
+    <select class="type" id="typeB"><option>PLUCK</option><option>SINE</option><option>PULSE</option><option>NOISE</option><option>DUST</option><option>DRONE</option></select>
+    <div class="knobGrid" id="knobsB"></div>
+    <div class="vol"><div class="volRow"><span>VOL</span><span id="volBVal">52</span></div><input id="volB" type="range" min="0" max="100" value="52"></div>
+  </div>
+</section>
+
+<section class="observeRow">
+  <div class="panel miniPanel"><strong>AUTO OBSERVE</strong><button class="autoBtn" id="autoObs">○ OFF</button></div>
+  <button id="observe"><span class="eye">◉</span>OBSERVE</button>
+  <div class="panel miniPanel"><strong>BOX STATE</strong><span id="boxState">CLOSED</span></div>
+</section>
+
+<section class="panel macroPanel">
+  <div class="macroGrid" id="macroGrid"></div>
+</section>
+
+<section class="panel processor">
+  <div class="label" style="margin-bottom:7px">PROCESSOR</div>
+  <div class="flow">
+    <div class="fxblock"><b>GRAIN</b><div class="fxicon">··:</div></div>
+    <div class="fxblock"><b>REPEAT</b><div class="fxicon">┊┊</div></div>
+    <div class="fxblock"><b>SHIFT</b><div class="fxicon">↟↡</div></div>
+    <div class="fxblock"><b>FILTER</b><div class="fxicon">⌁</div></div>
+    <div class="fxblock"><b>DELAY</b><div class="fxicon">○··</div></div>
+    <div class="fxblock"><b>SPACE</b><div class="fxicon">□</div></div>
+  </div>
+</section>
+
+<section class="monitors">
+  <div class="panel monitor"><div class="label">GRAIN MONITOR</div><canvas id="grainCanvas" width="220" height="70"></canvas></div>
+  <div class="panel monitor"><div class="label">SPECTRUM</div><canvas id="spectrum" width="220" height="70"></canvas></div>
+</section>
+
+<section class="bottom">
+  <div class="panel"><button id="reroll">⚄ REROLL STATE</button></div>
+  <div class="panel"><button id="bypass">BYPASS: OFF</button></div>
+</section>
+<footer><span>CB-001 / WEB AUDIO</span><span id="audioState">AUDIO: OFF</span></footer>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const rnd=(a=1,b=0)=>b+Math.random()*(a-b);
+
+let ctx=null, started=false, autoTimer=null, drawRAF=0, bypassed=false;
+let master, dryBus, wetBus, filter, delay, feedback, reverb, analyser, convolverGain;
+const generators={A:null,B:null};
+const params={
+  A:{pitch:50,rate:42,decay:48,variation:28,vol:55,on:true,type:'SINE'},
+  B:{pitch:57,rate:36,decay:58,variation:35,vol:52,on:true,type:'PLUCK'},
+  superposition:62,uncertainty:35,entanglement:24,halfLife:58,decayFx:48,grain:42,space:57
+};
+let probs={A:.37,B:.31,AB:.22,N:.10}, observed=false, collapse='AB';
+let grainDots=[];
+
+function makeKnob(parent,key,label,obj){
+  const wrap=document.createElement('div');wrap.className='knobWrap';
+  const b=document.createElement('button');b.className='knob';b.style.setProperty('--v',obj[key]);b.dataset.key=key;
+  const s=document.createElement('span');s.textContent=label;
+  let y0=null,v0=0;
+  const start=e=>{e.preventDefault(); y0=(e.touches?e.touches[0].clientY:e.clientY); v0=obj[key]; document.addEventListener('pointermove',move);document.addEventListener('pointerup',end,{once:true})}
+  const move=e=>{if(y0===null)return;obj[key]=clamp(v0+(y0-e.clientY)*.55,0,100);b.style.setProperty('--v',obj[key]);applyAll()}
+  const end=()=>{y0=null;document.removeEventListener('pointermove',move)}
+  b.addEventListener('pointerdown',start);
+  b.addEventListener('click',e=>e.preventDefault());
+  wrap.append(b,s);parent.append(wrap);return b;
+}
+['A','B'].forEach(g=>{
+  const root=$('knobs'+g),p=params[g];
+  makeKnob(root,'pitch','PITCH',p);makeKnob(root,'rate','RATE',p);
+  makeKnob(root,'decay','DECAY',p);makeKnob(root,'variation','VARIATION',p);
+  $('vol'+g).oninput=e=>{p.vol=+e.target.value;$('vol'+g+'Val').textContent=p.vol;applyAll()}
+  $('type'+g).onchange=e=>{p.type=e.target.value;rebuildGenerator(g);drawWaveforms()}
+});
+function macroKnob(key,label,big=false){
+  const w=document.createElement('div');w.className='knobWrap'+(big?' big':'');
+  if(big){const t=document.createElement('div');t.className='macroTitle';t.textContent='HALF-LIFE';w.append(t)}
+  const b=document.createElement('button');b.className='knob';b.style.setProperty('--v',params[key]);
+  const s=document.createElement('span');s.textContent=big?'SHORT  ←  →  LONG':label;
+  let sy=null,sv=0;
+  b.onpointerdown=e=>{e.preventDefault();sy=e.clientY;sv=params[key];b.setPointerCapture(e.pointerId)}
+  b.onpointermove=e=>{if(sy===null)return;params[key]=clamp(sv+(sy-e.clientY)*.55,0,100);b.style.setProperty('--v',params[key]);applyAll()}
+  b.onpointerup=()=>sy=null;b.onpointercancel=()=>sy=null;
+  w.append(b,s);$('macroGrid').append(w)
+}
+macroKnob('superposition','SUPERPOSITION');
+macroKnob('halfLife','HALF-LIFE',true);
+macroKnob('uncertainty','UNCERTAINTY');
+macroKnob('entanglement','ENTANGLEMENT');
+macroKnob('decayFx','DECAY');
+macroKnob('grain','GRAIN SIZE');
+macroKnob('space','OUTPUT SPACE');
+
+function initAudio(){
+  if(ctx)return;
+  const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+  master=ctx.createGain();master.gain.value=.75;
+  dryBus=ctx.createGain();wetBus=ctx.createGain();
+  filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=5200;filter.Q.value=.7;
+  delay=ctx.createDelay(2);delay.delayTime.value=.28;
+  feedback=ctx.createGain();feedback.gain.value=.38;
+  reverb=ctx.createConvolver();reverb.buffer=makeImpulse(2.4,2.6);
+  convolverGain=ctx.createGain();convolverGain.gain.value=.35;
+  analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.82;
+
+  dryBus.connect(filter);filter.connect(master);
+  wetBus.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(reverb);reverb.connect(convolverGain);convolverGain.connect(master);
+  master.connect(analyser);analyser.connect(ctx.destination);
+  rebuildGenerator('A');rebuildGenerator('B');applyAll();drawSpectrum();
+}
+function makeImpulse(sec,dec){
+  const len=Math.max(1,Math.floor(ctx.sampleRate*sec)),b=ctx.createBuffer(2,len,ctx.sampleRate);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,dec)}
+  return b
+}
+function destroyGen(g){
+  const x=generators[g];if(!x)return;
+  try{x.stop&&x.stop()}catch(e){}
+  try{x.src&&x.src.stop&&x.src.stop()}catch(e){}
+  try{x.timer&&clearInterval(x.timer)}catch(e){}
+  try{x.lfo&&x.lfo.stop()}catch(e){}
+  generators[g]=null;
+}
+function freqFrom(v){return 55*Math.pow(2,(v/100)*4)}
+function rebuildGenerator(g){
+  if(!ctx)return;destroyGen(g);
+  const p=params[g], gain=ctx.createGain(),pan=ctx.createStereoPanner(),out=ctx.createGain();
+  gain.gain.value=0;pan.pan.value=g==='A'?-.28:.28;
+  gain.connect(pan);pan.connect(out);out.connect(dryBus);out.connect(wetBus);
+  const type=p.type; let src=null,timer=null,stop=null;
+  if(type==='NOISE'||type==='DUST'){
+    const buf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    src=ctx.createBufferSource();src.buffer=buf;src.loop=true;
+    const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=freqFrom(p.pitch)*3;f.Q.value=type==='DUST'?8:1.2;
+    src.connect(f).connect(gain);src.start();
+    if(type==='DUST'){
+      gain.gain.value=0;
+      timer=setInterval(()=>{
+        if(!params[g].on||!started)return;
+        const t=ctx.currentTime;
+        gain.gain.cancelScheduledValues(t);gain.gain.setValueAtTime(.0001,t);
+        gain.gain.exponentialRampToValueAtTime(.18,t+.004);
+        gain.gain.exponentialRampToValueAtTime(.0001,t+.02+rnd(.12,.02));
+      },Math.max(55,560-p.rate*5));
+    }
+  } else {
+    src=ctx.createOscillator();src.type=type==='PULSE'?'square':'sine';src.frequency.value=freqFrom(p.pitch);
+    if(type==='DRONE'){
+      const o2=ctx.createOscillator(),g2=ctx.createGain();o2.type='sine';o2.frequency.value=freqFrom(p.pitch)*1.502;g2.gain.value=.22;o2.connect(g2).connect(gain);o2.start();
+      stop=()=>{try{o2.stop()}catch(e){}};
+    }
+    if(type==='PLUCK'){
+      gain.gain.value=0;
+      timer=setInterval(()=>{
+        if(!params[g].on||!started)return;
+        const t=ctx.currentTime, peak=.12+.12*(p.vol/100);
+        gain.gain.cancelScheduledValues(t);gain.gain.setValueAtTime(.0001,t);
+        gain.gain.exponentialRampToValueAtTime(peak,t+.008);
+        gain.gain.exponentialRampToValueAtTime(.0001,t+.08+(p.decay/100)*1.2);
+        src.frequency.setValueAtTime(freqFrom(p.pitch)*(1+rnd(.02,-.02)*p.variation/100),t);
+      },Math.max(120,1050-p.rate*9));
+    } else gain.gain.value=.08;
+    src.connect(gain);src.start();
+  }
+  generators[g]={src,gain,pan,out,timer,stop};
+  applyAll()
+}
+function effectiveState(g){
+  if(!observed)return 1;
+  if(collapse==='AB')return 1;
+  if(collapse===g)return 1;
+  return 0.0001;
+}
+function applyAll(){
+  if(!ctx)return;
+  ['A','B'].forEach(g=>{
+    const p=params[g],x=generators[g];if(!x)return;
+    const vol=p.on?p.vol/100:0;
+    const state=effectiveState(g);
+    let target=vol*state;
+    if(p.type!=='PLUCK'&&p.type!=='DUST')x.gain.gain.setTargetAtTime(Math.max(.0001,target*.16),ctx.currentTime,.04);
+    x.out.gain.setTargetAtTime(target,ctx.currentTime,.05);
+    if(x.src && x.src.frequency)x.src.frequency.setTargetAtTime(freqFrom(p.pitch),ctx.currentTime,.06);
+  });
+  const u=params.uncertainty/100, h=params.halfLife/100, grain=params.grain/100;
+  filter.frequency.setTargetAtTime(900+6000*(1-grain*.55),ctx.currentTime,.05);
+  delay.delayTime.setTargetAtTime(.06+grain*.62,ctx.currentTime,.06);
+  feedback.gain.setTargetAtTime(clamp(.12+params.decayFx/100*.62+h*.12,0,.86),ctx.currentTime,.08);
+  wetBus.gain.setTargetAtTime(.15+params.superposition/100*.75,ctx.currentTime,.08);
+  dryBus.gain.setTargetAtTime(.95-params.superposition/100*.48,ctx.currentTime,.08);
+  convolverGain.gain.setTargetAtTime(.08+params.space/100*.72,ctx.currentTime,.08);
+  master.gain.setTargetAtTime(bypassed?.0:.7,ctx.currentTime,.04);
+  if(generators.A&&generators.B){
+    const ent=params.entanglement/100;
+    generators.A.pan.pan.setTargetAtTime(-.35+.18*ent,ctx.currentTime,.12);
+    generators.B.pan.pan.setTargetAtTime(.35-.18*ent,ctx.currentTime,.12);
+  }
+  regenerateProbabilities(false);drawBox()
+}
+function regenerateProbabilities(randomize=true){
+  if(randomize){
+    let vals=[rnd(1,.1),rnd(1,.1),rnd(1,.1),rnd(.7,.05)];
+    const sum=vals.reduce((a,b)=>a+b,0);vals=vals.map(v=>v/sum);
+    probs={A:vals[0],B:vals[1],AB:vals[2],N:vals[3]};
+  }else{
+    const s=params.superposition/100,u=params.uncertainty/100,e=params.entanglement/100;
+    let A=.31+(1-e)*.12, B=.29+(1-e)*.08, AB=.14+s*.26+e*.12, N=.06+u*.12;
+    const sum=A+B+AB+N;probs={A:A/sum,B:B/sum,AB:AB/sum,N:N/sum};
+  }
+  [['A','pa','ba'],['B','pb','bb'],['AB','pab','bab'],['N','p0','b0']].forEach(([k,t,b])=>{
+    $(t).textContent=probs[k].toFixed(2).replace(/^0/,'');$(b).style.width=(probs[k]*100)+'%';
+  })
+}
+function collapseNow(){
+  observed=true;
+  const r=Math.random(),a=probs.A,b=a+probs.B,ab=b+probs.AB;
+  collapse=r<a?'A':r<b?'B':r<ab?'AB':'N';
+  const labels={A:'A EXISTS',B:'B EXISTS',AB:'A + B',N:'VACUUM'};
+  $('stateText').textContent=labels[collapse];$('stateSub').textContent='WAVEFUNCTION COLLAPSED';$('boxState').textContent='OPEN / '+labels[collapse];
+  applyAll();$('observe').classList.add('activeGlow');setTimeout(()=>$('observe').classList.remove('activeGlow'),260)
+}
+function unobserve(){
+  observed=false;$('stateText').textContent='SUPERPOSITION';$('stateSub').textContent='UNOBSERVED / BOX CLOSED';$('boxState').textContent='CLOSED';applyAll()
+}
+$('observe').onclick=async()=>{await startAudio();observed?unobserve():collapseNow()}
+$('globalObserve').onclick=()=>$('observe').click();
+$('autoObs').onclick=async()=>{
+  await startAudio();
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('autoObs').textContent='○ OFF';return}
+  $('autoObs').textContent='● ON';
+  autoTimer=setInterval(()=>{unobserve();setTimeout(collapseNow,260)},1800+params.halfLife*28)
+}
+document.querySelectorAll('.genOn').forEach(b=>b.onclick=async()=>{await startAudio();const g=b.dataset.gen;params[g].on=!params[g].on;b.classList.toggle('off',!params[g].on);applyAll()});
+$('reroll').onclick=async()=>{
+  await startAudio();unobserve();regenerateProbabilities(true);
+  ['A','B'].forEach(g=>{params[g].variation=clamp(params[g].variation+rnd(24,-24),0,100)});
+  params.uncertainty=clamp(params.uncertainty+rnd(28,-28),0,100);drawBox();
+}
+$('bypass').onclick=()=>{bypassed=!bypassed;$('bypass').textContent='BYPASS: '+(bypassed?'ON':'OFF');applyAll()}
+async function startAudio(){
+  initAudio();if(ctx.state!=='running')await ctx.resume();started=true;$('audioBtn').textContent='Ⅱ';$('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();applyAll()
+}
+$('audioBtn').onclick=async()=>{
+  initAudio();
+  if(ctx.state==='running'){await ctx.suspend();started=false;$('audioBtn').textContent='▶'}
+  else{await ctx.resume();started=true;$('audioBtn').textContent='Ⅱ'}
+  $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase()
+}
+
+function line(ctx2,x1,y1,x2,y2,a=1){ctx2.globalAlpha=a;ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x2,y2);ctx2.stroke()}
+function drawEye(){
+  const c=$('eyeCanvas'),x=c.getContext('2d'),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.strokeStyle='#f4f4ef';x.lineWidth=1;
+  x.beginPath();x.moveTo(56,h/2);x.quadraticCurveTo(w/2,-12,w-56,h/2);x.quadraticCurveTo(w/2,h+12,56,h/2);x.stroke();
+  for(let i=1;i<8;i++){x.globalAlpha=.12+i*.06;x.beginPath();x.ellipse(w/2,h/2,i*24,9+i*2.2,0,0,Math.PI*2);x.stroke()}
+  x.globalAlpha=1;x.beginPath();x.arc(w/2,h/2,12,0,Math.PI*2);x.stroke();x.beginPath();x.arc(w/2,h/2,3,0,Math.PI*2);x.fillStyle='#f4f4ef';x.fill()
+}
+function drawCat(x,ox,alpha,dotted=false){
+  x.save();x.translate(ox,0);x.globalAlpha=alpha;x.strokeStyle='#f4f4ef';x.lineWidth=1;
+  if(dotted)x.setLineDash([2,4]);
+  x.beginPath();x.arc(0,-20,19,0,Math.PI*2);x.stroke();
+  x.beginPath();x.moveTo(-14,-34);x.lineTo(-18,-54);x.lineTo(-3,-39);x.moveTo(14,-34);x.lineTo(18,-54);x.lineTo(3,-39);x.stroke();
+  x.beginPath();x.ellipse(0,22,23,42,0,0,Math.PI*2);x.stroke();
+  x.beginPath();x.moveTo(17,40);x.quadraticCurveTo(40,36,35,14);x.stroke();
+  line(x,-7,-20,-3,-20);line(x,3,-20,7,-20);line(x,-3,-11,3,-11);x.restore()
+}
+function drawBox(){
+  const c=$('boxCanvas'),x=c.getContext('2d'),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.strokeStyle='#f4f4ef';x.lineWidth=1;
+  x.globalAlpha=.55;x.strokeRect(18,34,w-36,h-54);x.strokeRect(31,20,w-62,h-54);
+  line(x,18,34,31,20);line(x,w-18,34,w-31,20);line(x,18,h-20,31,h-34);line(x,w-18,h-20,w-31,h-34);
+  for(let i=0;i<6;i++){let yy=50+i*27;line(x,19,yy,w-19,yy,.12)}
+  for(let i=0;i<7;i++){let xx=32+i*26;line(x,xx,34,xx,h-20,.08)}
+  x.save();x.translate(w/2,h/2+8);
+  if(!observed){drawCat(x,-18,.92,false);drawCat(x,18,.38,true)}
+  else if(collapse==='A'){drawCat(x,-8,1,false)}
+  else if(collapse==='B'){drawCat(x,8,1,true)}
+  else if(collapse==='AB'){drawCat(x,-15,.9,false);drawCat(x,15,.55,true)}
+  else {x.globalAlpha=.5;x.font='9px Courier New';x.textAlign='center';x.fillStyle='#f4f4ef';x.fillText('∅',0,0)}
+  x.restore();
+  x.globalAlpha=.5;x.beginPath();x.moveTo(w/2,24);x.lineTo(w/2,h-25);x.setLineDash([3,4]);x.stroke();x.setLineDash([])
+}
+function drawWave(canvas,type,phase){
+  const c=$(canvas),x=c.getContext('2d'),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.strokeStyle='#f4f4ef';x.lineWidth=1;x.beginPath();
+  for(let i=0;i<w;i++){
+    const t=i/w*6.28*2+phase;let y=0;
+    if(type==='SINE'||type==='DRONE')y=Math.sin(t)*(type==='DRONE'?Math.sin(t*.23)*.65+.35:1);
+    if(type==='PULSE')y=Math.sin(t)>0?.8:-.8;
+    if(type==='PLUCK')y=Math.sin(t*1.7)*Math.exp(-((i/w)*2.5)%2.5);
+    if(type==='NOISE')y=(Math.random()*2-1)*.5;
+    if(type==='DUST')y=Math.random()>.92?(Math.random()*2-1):0;
+    const yy=h/2-y*h*.34;i?x.lineTo(i,yy):x.moveTo(i,yy)
+  }x.stroke()
+}
+function drawWaveforms(){drawWave('waveA',params.A.type,0);drawWave('waveB',params.B.type,.8)}
+function drawGrains(){
+  const c=$('grainCanvas'),x=c.getContext('2d'),w=c.width,h=c.height;
+  if(Math.random()<.24+params.grain/180)grainDots.push({x:w,y:rnd(h-5,5),v:rnd(2.4,.5),a:1});
+  grainDots.forEach(p=>{p.x-=p.v;p.a-=.015});grainDots=grainDots.filter(p=>p.x>0&&p.a>0);
+  x.clearRect(0,0,w,h);x.fillStyle='#f4f4ef';grainDots.forEach(p=>{x.globalAlpha=p.a;x.fillRect(p.x,p.y,1.5,1.5)});x.globalAlpha=1
+}
+function drawSpectrum(){
+  if(!analyser)return;const c=$('spectrum'),x=c.getContext('2d'),w=c.width,h=c.height,arr=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(arr);x.clearRect(0,0,w,h);x.strokeStyle='#f4f4ef';x.globalAlpha=.78;
+  const bw=w/arr.length;x.beginPath();for(let i=0;i<arr.length;i+=3){const yy=h-arr[i]/255*h*.9;x.moveTo(i*bw,h);x.lineTo(i*bw,yy)}x.stroke();x.globalAlpha=1;requestAnimationFrame(drawSpectrum)
+}
+function animation(){
+  drawEye();drawBox();drawWaveforms();drawGrains();
+  if(ctx&&started&&params.uncertainty>5){
+    const u=params.uncertainty/100;
+    ['A','B'].forEach(g=>{const x=generators[g];if(x&&x.src&&x.src.detune)x.src.detune.value=Math.sin(performance.now()/700+(g==='A'?0:2))*18*u})
+  }
+  drawRAF=requestAnimationFrame(animation)
+}
+regenerateProbabilities(false);drawEye();drawBox();drawWaveforms();animation();
+</script>
+</body>
+</html>
