@@ -582,32 +582,35 @@ function updateCatWalk(now){
   if(started && now>catWalk.nextFx){
     const edge=Math.abs(catWalk.pos);
     const centre=1-edge;
-    const direction=catWalk.pos<0?-1:1;
 
-    // The cat physically tampers with the quantum controls.
-    const changes={
-      superposition: rr(5.5,-2.5) + centre*3.2,
-      tunneling: rr(5.0,-2.0) + edge*3.4,
-      decoherence: rr(4.2,-2.2) + Math.abs(catWalk.bob)*2.6,
-      entanglement: rr(5.5,-2.2) + centre*4.0 + direction*rr(1.2,-1.2)
-    };
+    // One paw, one control. CAT WALK nudges only a single quantum parameter at a time.
+    const keys=['superposition','tunneling','decoherence','entanglement'];
+    const key=keys[Math.floor(Math.random()*keys.length)];
+
+    let range=2.6;
+    if(key==='superposition')range+=centre*2.0;
+    if(key==='tunneling')range+=edge*2.2;
+    if(key==='decoherence')range+=Math.abs(catWalk.bob)*1.8;
+    if(key==='entanglement')range+=centre*2.2;
+
+    const delta=rr(range,-range);
+    p[key]=Math.round(clamp(p[key]+delta,0,100));
 
     const map={
-      superposition:['super','superV'],
-      tunneling:['tunnel','tunnelV'],
-      decoherence:['deco','decoV'],
-      entanglement:['ent','entV']
+      superposition:['super','superV','super'],
+      tunneling:['tunnel','tunnelV','tunnel'],
+      decoherence:['deco','decoV','deco'],
+      entanglement:['ent','entV','ent']
     };
+    const [id,out,particleKind]=map[key];
+    $(id).value=p[key];
+    $(out).textContent=p[key];
 
-    Object.entries(changes).forEach(([key,delta])=>{
-      p[key]=Math.round(clamp(p[key]+delta,0,100));
-      const [id,out]=map[key];
-      $(id).value=p[key];
-      $(out).textContent=p[key];
-    });
+    addParticle(particleKind,catWalk.pos<0?'A':'B');
+    applyMix();
 
-    addParticle(centre>.55?'ent':edge>.55?'tunnel':'super',catWalk.pos<0?'A':'B');
-    catWalk.nextFx=now+rr(1450,650);
+    // Slow enough that each small change can be noticed before the next paw lands.
+    catWalk.nextFx=now+rr(3200,1700);
   }
 
   if(!catWalk._lastMix || now-catWalk._lastMix>140){
@@ -1003,6 +1006,30 @@ function driftDrone(g){
   visual[g].hit=Math.max(visual[g].hit,.22);
   q.driftTimer=setTimeout(()=>driftDrone(g),rr(6500,1900));
 }
+
+function stopSourcesKeepTails(){
+  // Stop scheduling NEW generator events, but leave the FX graph alive.
+  ['A','B'].forEach(g=>{
+    if(gens[g]?.timer){
+      clearTimeout(gens[g].timer);
+      gens[g].timer=null;
+    }
+    // Continuous DRONE nodes must be faded/stopped, otherwise they never release.
+    if(gens[g]?.gain){
+      try{
+        gens[g].gain.gain.cancelScheduledValues(ctx.currentTime);
+        gens[g].gain.gain.setTargetAtTime(.0001,ctx.currentTime,.06);
+      }catch(e){}
+    }
+    if(gens[g]?.oscillators){
+      gens[g].oscillators.forEach(o=>{
+        try{o.stop(ctx.currentTime+.35)}catch(e){}
+      });
+      gens[g].oscillators=[];
+    }
+  });
+}
+
 function applyMix(){
   if(!ctx)return;
   let sup=p.superposition/100;
@@ -1115,7 +1142,8 @@ async function startAudio(){
 $('audioBtn').onclick=async()=>{
   initAudio();
   if(ctx.state==='running'){
-    await ctx.suspend();started=false;
+    await /* keep AudioContext running so ECHO/HALL tails can decay */started=false;
+    stopSourcesKeepTails();
     $('audioBtn').textContent='▶ PLAY';
     $('audioBtn').classList.remove('running');
   }else{
