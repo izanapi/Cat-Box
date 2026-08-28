@@ -33,14 +33,33 @@ button{touch-action:manipulation}
   min-height:100svh;
   padding:calc(12px + env(safe-area-inset-top)) 10px calc(16px + env(safe-area-inset-bottom));
 }
-header{
-  display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
-  margin-bottom:8px;border-top:5px solid var(--accent);padding-top:5px
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  min-height:34px;margin-bottom:7px;
+  border-top:5px solid var(--accent);
+  border-bottom:1px solid var(--ink);
+  padding:3px 1px 4px;
 }
-h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24em}
-.sub{text-align:center;color:var(--dim);font-size:6px;letter-spacing:.18em;margin-top:3px}
-.icon{
-  height:38px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:0
+.brand{
+  font-size:12px;font-weight:700;letter-spacing:.13em;
+  white-space:nowrap;
+}
+.menu{
+  display:flex;align-items:center;gap:4px;
+}
+.timeLabel,.menuBtn{
+  height:24px;display:flex;align-items:center;justify-content:center;
+  padding:0 7px;border:1px solid var(--line);
+  background:transparent;color:var(--ink);
+  font-size:6px;letter-spacing:.11em;
+}
+.timeLabel{color:var(--dim);min-width:62px}
+.menuBtn{cursor:pointer;min-width:51px}
+.menuBtn:active,.playBtn.running{
+  background:var(--ink);color:var(--bg);
+}
+.playBtn.running{
+  border-bottom:3px solid var(--accent);
 }
 .panel{
   border:1px solid var(--line);position:relative;background:transparent
@@ -90,7 +109,7 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
 .boxStage{
   position:relative;min-width:0;min-height:0;width:100%;height:100%;
   overflow:hidden;display:flex;align-items:center;justify-content:center;
-}
+ }
 .boxStage #box{
   position:absolute;inset:0;width:100%;height:100%;
 }
@@ -114,7 +133,7 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
 }
 .fxTitle b{font-weight:400;font-size:8px;letter-spacing:.17em}
 .fxTitle span{font-size:5.5px;color:var(--dim)}
-.control{min-width:0}
+.control{min-width:0;padding:1px 0}
 .row{display:grid;grid-template-columns:116px 1fr 25px;gap:6px;align-items:center}
 .row b{font-weight:400;font-size:7px;letter-spacing:.11em}
 .row span{font-size:6px;color:var(--dim);text-align:right}
@@ -133,11 +152,21 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
   .fxDesc{padding-left:110px;font-size:4.7px}
 }
 input[type=range]{
-  appearance:none;-webkit-appearance:none;width:100%;height:15px;background:transparent;margin:0
+  appearance:none;-webkit-appearance:none;
+  width:100%;height:30px;background:transparent;margin:-7px 0;
+  padding:7px 0;touch-action:pan-y;
 }
-input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--faint)}
+input[type=range]::-webkit-slider-runnable-track{
+  height:3px;background:rgba(247,247,242,.24);
+}
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:7px;height:13px;background:var(--accent);border:0;border-radius:0;margin-top:-5px
+  -webkit-appearance:none;width:13px;height:17px;background:var(--accent);
+  border:1px solid var(--ink);border-radius:0;margin-top:-7px
+}
+input[type=range]::-moz-range-track{height:3px;background:rgba(247,247,242,.24);border:0}
+input[type=range]::-moz-range-thumb{
+  width:13px;height:17px;background:var(--accent);
+  border:1px solid var(--ink);border-radius:0;
 }
 .classicFx{
   display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
@@ -147,11 +176,29 @@ input[type=range]::-webkit-slider-thumb{
 .classicHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:0}
 .classicHead b{font-weight:400;font-size:7px;letter-spacing:.11em}
 .classicHead span{font-size:6px;color:var(--dim)}
-.effectField{
-  border-top:1px solid var(--faint);padding-top:4px;
-  min-height:66px;max-height:82px;display:flex;flex-direction:column
+
+.graphPaper{
+  background-color:var(--ink);
+  background-image:
+    linear-gradient(rgba(8,8,232,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,8,232,.16) 1px, transparent 1px),
+    linear-gradient(rgba(8,8,232,.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8,8,232,.28) 1px, transparent 1px);
+  background-size:
+    10px 10px,
+    10px 10px,
+    50px 50px,
+    50px 50px;
 }
-.fieldHead{display:flex;justify-content:space-between;font-size:5.5px;color:var(--dim);margin-bottom:2px}
+.effectField{
+  border:1px solid var(--ink);
+  padding:4px 5px 5px;
+  min-height:66px;max-height:82px;display:flex;flex-direction:column;
+ }
+.fieldHead{
+  display:flex;justify-content:space-between;font-size:5.5px;
+  color:var(--bg);margin-bottom:2px
+}
 #field{width:100%;height:100%;display:block;flex:1;min-height:50px}
 
 footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim);font-size:5px;letter-spacing:.08em}
@@ -167,13 +214,13 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
 <body>
 <canvas id="circuitBG"></canvas>
 <main id="app">
-<header>
-  <button class="icon" id="audioBtn">▶</button>
-  <div>
-    <h1>CAT BOX</h1>
-    <div class="sub">QUANTUM AUDIO INSTRUMENT / CB-004</div>
+<header class="topbar">
+  <div class="brand">CAT BOX</div>
+  <div class="menu">
+    <span class="timeLabel" id="timeLabel">TIME 00:00</span>
+    <button class="menuBtn" id="reroll">REROLL</button>
+    <button class="menuBtn playBtn" id="audioBtn">PLAY</button>
   </div>
-  <button class="icon" id="reroll">⚄</button>
 </header>
 
 <section class="top">
@@ -202,7 +249,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       </div>
     </div>
     <canvas id="eye" width="260" height="58"></canvas>
-    <div class="boxStage"><canvas id="box" width="260" height="260"></canvas></div>
+    <div class="boxStage graphPaper"><canvas id="box" width="260" height="260"></canvas></div>
     <div class="observeFoot">
       <div>
         <div class="obsTitle">OBSERVATION FIELD</div>
@@ -219,7 +266,7 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
     <span>BUFFER / MEMORY / PROBABILITY</span>
   </div>
 
-  <div class="effectField">
+  <div class="effectField graphPaper">
     <div class="fieldHead"><span id="fieldLabel">EFFECT FIELD</span><span id="fieldState">0 PARTICLES</span></div>
     <canvas id="field" width="460" height="90"></canvas>
   </div>
@@ -322,12 +369,12 @@ function flashField(key,val){
   const info=fxHelp[key];
   if(!info)return;
   $('fieldLabel').textContent=info[0]+' '+val;
-  $('fieldLabel').style.color='var(--accent)';
+  $('fieldLabel').style.color='#ff22c8';
   $('fieldState').textContent=info[1];
   clearTimeout(fieldFlashTimer);
   fieldFlashTimer=setTimeout(()=>{
     $('fieldLabel').textContent='EFFECT FIELD';
-    $('fieldLabel').style.color='var(--dim)';
+    $('fieldLabel').style.color='var(--bg)';
     $('fieldState').textContent=particles.length+' PARTICLES';
     fieldFlashTimer=null;
   },900);
@@ -712,16 +759,24 @@ function scheduleObserve(){
 async function startAudio(){
   initAudio();
   if(ctx.state!=='running')await ctx.resume();
+  if(!started)uiTimeOrigin=performance.now();
   started=true;
-  $('audioBtn').textContent='Ⅱ';
+  $('audioBtn').textContent='STOP';
+  $('audioBtn').classList.add('running');
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
 }
 $('audioBtn').onclick=async()=>{
   initAudio();
   if(ctx.state==='running'){
-    await ctx.suspend();started=false;$('audioBtn').textContent='▶';
+    await ctx.suspend();started=false;
+    $('audioBtn').textContent='PLAY';
+    $('audioBtn').classList.remove('running');
   }else{
-    await ctx.resume();started=true;$('audioBtn').textContent='Ⅱ';
+    await ctx.resume();
+    uiTimeOrigin=performance.now();
+    started=true;
+    $('audioBtn').textContent='STOP';
+    $('audioBtn').classList.add('running');
   }
   $('audioState').textContent='AUDIO: '+ctx.state.toUpperCase();
 };
@@ -781,11 +836,11 @@ function drawEye(){
   x.globalAlpha=1;
   x.beginPath();x.arc(w/2,h/2,10,0,Math.PI*2);x.stroke();
 }
-function drawCat(x,ox,alpha,dotted=false){
+function drawCat(x,ox,alpha,dotted=false,color='#0808e8'){
   x.save();
   x.translate(ox,0);
   x.globalAlpha=alpha;
-  x.strokeStyle='#f5f5f0';
+  x.strokeStyle=color;
   x.lineWidth=1;
   if(dotted)x.setLineDash([2,4]);
 
@@ -805,8 +860,8 @@ function drawCat(x,ox,alpha,dotted=false){
 function drawBox(){
   const c=$('box'),x=c.getContext('2d'),w=c.width,h=c.height;
   x.clearRect(0,0,w,h);
-  x.strokeStyle='#f5f5f0';x.lineWidth=1;
-  x.globalAlpha=.52;
+  x.strokeStyle='#0808e8';x.lineWidth=1;
+  x.globalAlpha=.62;
 
   x.strokeRect(18,29,w-36,h-46);
   x.strokeRect(31,17,w-62,h-46);
@@ -824,24 +879,25 @@ function drawBox(){
   x.translate(w/2,h/2+6);
   x.scale(catScale,catScale);
   if(!observed){
-    drawCat(x,-15,.92,false);
-    drawCat(x,15,.33,true);
+    drawCat(x,-15,.92,false,'#0808e8');
+    drawCat(x,15,.72,true,'#ff22c8');
   }else if(collapse==='A'){
-    drawCat(x,-5,1,false);
+    drawCat(x,-5,1,false,'#0808e8');
   }else if(collapse==='B'){
-    drawCat(x,5,.85,true);
+    drawCat(x,5,.92,true,'#ff22c8');
   }else if(collapse==='AB'){
-    drawCat(x,-13,.9,false);
-    drawCat(x,13,.52,true);
+    drawCat(x,-13,.92,false,'#0808e8');
+    drawCat(x,13,.82,true,'#ff22c8');
   }else{
     x.globalAlpha=.6;
-    x.fillStyle='#f5f5f0';
+    x.fillStyle='#0808e8';
     x.font='13px Courier New';
     x.textAlign='center';
     x.fillText('∅',0,0);
   }
   x.restore();
 
+  x.strokeStyle='#0808e8';
   x.setLineDash([3,4]);
   line(x,w/2,21,w/2,h-19,.25);
   x.setLineDash([]);
@@ -953,19 +1009,33 @@ function drawField(){
   });
 
   particles=particles.filter(pt=>pt.life>0&&pt.x>-5&&pt.x<w+5&&pt.y>-5&&pt.y<h+5);
-  x.strokeStyle='#f5f5f0';
-  x.fillStyle='#f5f5f0';
+  const quantumBlue='#0808e8';
+  const quantumPink='#ff22c8';
 
   particles.forEach(pt=>{
     x.globalAlpha=clamp(pt.life,0,1);
-    if(pt.kind==='ent'){
-      x.beginPath();x.arc(pt.x,pt.y,2.2,0,Math.PI*2);x.stroke();
-    }else if(pt.kind==='tunnel'){
-      x.fillRect(pt.x,pt.y,3,1);
-    }else if(pt.kind==='collapse'){
-      x.beginPath();x.arc(pt.x,pt.y,3.2,0,Math.PI*2);x.stroke();
-    }else{
-      x.fillRect(pt.x,pt.y,1.5,1.5);
+    const pink = pt.kind==='ent' || pt.kind==='collapse' ||
+                 (pt.kind==='super' && Math.random()>.55);
+    x.strokeStyle=pink?quantumPink:quantumBlue;
+    x.lineWidth=1.15;
+
+    let radius=1.6;
+    if(pt.kind==='super')radius=2.0;
+    if(pt.kind==='ent')radius=2.5;
+    if(pt.kind==='tunnel')radius=1.45;
+    if(pt.kind==='collapse')radius=3.2;
+
+    x.beginPath();
+    x.arc(pt.x,pt.y,radius,0,Math.PI*2);
+    x.stroke();
+
+    // Occasional second state, offset by one pixel, for a quantum split feel.
+    if(pt.kind==='super' && pt.life>.45){
+      x.globalAlpha=clamp(pt.life*.42,0,1);
+      x.strokeStyle=pink?quantumBlue:quantumPink;
+      x.beginPath();
+      x.arc(pt.x+2.2,pt.y-1.2,radius*.72,0,Math.PI*2);
+      x.stroke();
     }
   });
   x.globalAlpha=1;
@@ -1064,6 +1134,17 @@ function animate(){
   drawField();
   requestAnimationFrame(animate);
 }
+
+let uiTimeOrigin=performance.now();
+function updateTimeLabel(){
+  const elapsed=started ? Math.floor((performance.now()-uiTimeOrigin)/1000) : 0;
+  const mm=String(Math.floor(elapsed/60)).padStart(2,'0');
+  const ss=String(elapsed%60).padStart(2,'0');
+  if($('timeLabel'))$('timeLabel').textContent='TIME '+mm+':'+ss;
+  requestAnimationFrame(updateTimeLabel);
+}
+updateTimeLabel();
+
 scheduleObserve();
 animate();
 </script>
