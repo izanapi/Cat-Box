@@ -928,20 +928,62 @@ function drawCat(x,ox,alpha,dotted=false,color='#0808e8'){
   x.translate(ox,0);
   x.globalAlpha=alpha;
   x.strokeStyle=color;
-  x.lineWidth=1;
-  if(dotted)x.setLineDash([2,4]);
+  x.fillStyle=color;
+  x.lineWidth=2.2;
+  x.lineCap='round';
+  x.lineJoin='round';
+  if(dotted)x.setLineDash([3,5]);
 
-  x.beginPath();x.arc(0,-20,18,0,Math.PI*2);x.stroke();
+  // Big smiling cat face: the CAT in CAT BOX should be impossible to miss.
   x.beginPath();
-  x.moveTo(-13,-34);x.lineTo(-17,-51);x.lineTo(-3,-38);
-  x.moveTo(13,-34);x.lineTo(17,-51);x.lineTo(3,-38);
+  x.moveTo(-42,-15);
+  x.quadraticCurveTo(-45,-48,-27,-61);
+  x.lineTo(-15,-44);
+  x.quadraticCurveTo(0,-50,15,-44);
+  x.lineTo(27,-61);
+  x.quadraticCurveTo(45,-48,42,-15);
+  x.quadraticCurveTo(39,31,0,38);
+  x.quadraticCurveTo(-39,31,-42,-15);
   x.stroke();
-  x.beginPath();x.ellipse(0,20,22,39,0,0,Math.PI*2);x.stroke();
-  x.beginPath();x.moveTo(16,36);x.quadraticCurveTo(38,34,33,12);x.stroke();
 
-  line(x,-7,-20,-3,-20);
-  line(x,3,-20,7,-20);
-  line(x,-3,-11,3,-11);
+  // ears, inner marks
+  x.lineWidth=1.25;
+  x.beginPath();
+  x.moveTo(-30,-53);x.lineTo(-24,-41);x.lineTo(-36,-43);
+  x.moveTo(30,-53);x.lineTo(24,-41);x.lineTo(36,-43);
+  x.stroke();
+
+  // happy crescent eyes
+  x.lineWidth=2.1;
+  x.beginPath();
+  x.moveTo(-25,-12);
+  x.quadraticCurveTo(-17,-19,-9,-12);
+  x.moveTo(9,-12);
+  x.quadraticCurveTo(17,-19,25,-12);
+  x.stroke();
+
+  // little triangular nose
+  x.beginPath();
+  x.moveTo(-3,0);x.lineTo(3,0);x.lineTo(0,4);x.closePath();
+  x.fill();
+
+  // smile
+  x.beginPath();
+  x.moveTo(0,4);
+  x.quadraticCurveTo(-5,14,-13,10);
+  x.moveTo(0,4);
+  x.quadraticCurveTo(5,14,13,10);
+  x.stroke();
+
+  // whiskers
+  x.lineWidth=1.1;
+  x.beginPath();
+  x.moveTo(-14,2);x.lineTo(-43,-3);
+  x.moveTo(-14,7);x.lineTo(-44,10);
+  x.moveTo(14,2);x.lineTo(43,-3);
+  x.moveTo(14,7);x.lineTo(44,10);
+  x.stroke();
+
   x.restore();
 }
 function drawBox(){
@@ -962,19 +1004,19 @@ function drawBox(){
   }
 
   x.save();
-  const catScale=Math.min(1, Math.max(.58,(h-55)/150));
-  x.translate(w/2,h/2+6);
+  const catScale=Math.min(1.42, Math.max(.86,(h-48)/128));
+  x.translate(w/2,h/2+8);
   x.scale(catScale,catScale);
   if(!observed){
-    drawCat(x,-15,.92,false,'#0808e8');
-    drawCat(x,15,.72,true,'#ff22c8');
+    drawCat(x,-18,.92,false,'#0808e8');
+    drawCat(x,18,.76,true,'#ff22c8');
   }else if(collapse==='A'){
-    drawCat(x,-5,1,false,'#0808e8');
+    drawCat(x,0,1,false,'#0808e8');
   }else if(collapse==='B'){
-    drawCat(x,5,.92,true,'#ff22c8');
+    drawCat(x,0,.96,false,'#ff22c8');
   }else if(collapse==='AB'){
-    drawCat(x,-13,.92,false,'#0808e8');
-    drawCat(x,13,.82,true,'#ff22c8');
+    drawCat(x,-18,.9,false,'#0808e8');
+    drawCat(x,18,.84,false,'#ff22c8');
   }else{
     x.globalAlpha=.6;
     x.fillStyle='#0808e8';
