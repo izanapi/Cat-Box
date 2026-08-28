@@ -92,48 +92,46 @@ h1{margin:0;text-align:center;font-weight:400;font-size:20px;letter-spacing:.24e
 @keyframes pulse{50%{opacity:.2}}
 
 .fx{
-  margin-top:7px;padding:10px;
-  min-height:42svh;
-  display:grid;grid-auto-rows:auto;gap:8px
+  margin-top:6px;padding:8px 9px 7px;
+  min-height:39svh;
+  display:grid;grid-auto-rows:auto;gap:5px
 }
 .fxTitle{
-  display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--faint);padding-bottom:5px
+  display:flex;justify-content:space-between;align-items:end;
+  border-bottom:1px solid var(--faint);padding-bottom:3px
 }
 .fxTitle b{font-weight:400;font-size:8px;letter-spacing:.17em}
 .fxTitle span{font-size:5.5px;color:var(--dim)}
 .control{min-width:0}
-.row{display:grid;grid-template-columns:120px 1fr 28px;gap:7px;align-items:center}
+.row{display:grid;grid-template-columns:116px 1fr 25px;gap:6px;align-items:center}
 .row b{font-weight:400;font-size:7px;letter-spacing:.11em}
 .row span{font-size:6px;color:var(--dim);text-align:right}
 input[type=range]{
-  appearance:none;-webkit-appearance:none;width:100%;height:18px;background:transparent;margin:0
+  appearance:none;-webkit-appearance:none;width:100%;height:15px;background:transparent;margin:0
 }
 input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--faint)}
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:7px;height:15px;background:var(--ink);border:0;border-radius:0;margin-top:-6px
+  -webkit-appearance:none;width:7px;height:13px;background:var(--ink);border:0;border-radius:0;margin-top:-5px
 }
 .classicFx{
-  display:grid;grid-template-columns:1fr 1fr;gap:12px;
-  border-top:1px solid var(--faint);padding-top:7px
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+  border-top:1px solid var(--faint);padding-top:5px
 }
 .classicControl{min-width:0}
-.classicHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1px}
+.classicHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:0}
 .classicHead b{font-weight:400;font-size:7px;letter-spacing:.11em}
 .classicHead span{font-size:6px;color:var(--dim)}
 .effectField{
-  border-top:1px solid var(--faint);padding-top:6px;min-height:80px;display:flex;flex-direction:column
+  border-top:1px solid var(--faint);padding-top:4px;
+  min-height:66px;max-height:82px;display:flex;flex-direction:column
 }
-.fieldHead{display:flex;justify-content:space-between;font-size:5.5px;color:var(--dim);margin-bottom:4px}
-#field{width:100%;height:100%;display:block;flex:1;min-height:60px}
+.fieldHead{display:flex;justify-content:space-between;font-size:5.5px;color:var(--dim);margin-bottom:2px}
+#field{width:100%;height:100%;display:block;flex:1;min-height:50px}
 
-.footerRow{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
-.action{
-  height:35px;background:transparent;border:1px solid var(--line);color:var(--ink);font-size:7px;letter-spacing:.11em
-}
 footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim);font-size:5px;letter-spacing:.08em}
 
 @media(max-width:390px){
-  .top{grid-template-columns:40% 60%;height:45svh;min-height:345px}
+  .top{grid-template-columns:40% 60%;height:44svh;min-height:332px}
   .gen{padding:6px}.observe{padding:6px}
   .row{grid-template-columns:104px 1fr 24px}
   .typeBtn{font-size:5px}
@@ -194,6 +192,11 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
     <span>BUFFER / MEMORY / PROBABILITY</span>
   </div>
 
+  <div class="effectField">
+    <div class="fieldHead"><span>EFFECT FIELD</span><span id="fieldState">0 PARTICLES</span></div>
+    <canvas id="field" width="460" height="90"></canvas>
+  </div>
+
   <div class="control">
     <div class="row">
       <b>SUPERPOSITION</b>
@@ -232,21 +235,17 @@ footer{display:flex;justify-content:space-between;margin-top:6px;color:var(--dim
       <input id="echo" type="range" min="0" max="100" value="34">
     </div>
     <div class="classicControl">
-      <div class="classicHead"><b>HALL REVERB</b><span id="hallV">46</span></div>
+      <div class="classicHead"><b>HALL</b><span id="hallV">46</span></div>
       <input id="hall" type="range" min="0" max="100" value="46">
     </div>
+    <div class="classicControl">
+      <div class="classicHead"><b>VOLUME</b><span id="volumeV">78</span></div>
+      <input id="volume" type="range" min="0" max="100" value="78">
+    </div>
   </div>
+</section></section>
 
-  <div class="effectField">
-    <div class="fieldHead"><span>EFFECT FIELD</span><span id="fieldState">0 PARTICLES</span></div>
-    <canvas id="field" width="460" height="90"></canvas>
-  </div>
-</section>
 
-<section class="footerRow">
-  <button class="action" id="bypass">BYPASS: OFF</button>
-  <button class="action" id="mute">MUTE: OFF</button>
-</section>
 
 <footer><span>SCHRÖDINGER AUDIO LAB</span><span id="audioState">AUDIO: OFF</span></footer>
 </main>
@@ -257,8 +256,8 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rr=(a,b)=>b+Math.random()*(a-b);
 const TYPES=['PLUCK','DUST','GHOST','DRONE'];
 
-let ctx=null,master,dryBus,fxBus,delay,feedback,filter,reverb,revGain;
-let started=false,bypassed=false,muted=false,observeTimer=null;
+let ctx=null,master,dryBus,fxBus,delay,feedback,filter,reverb,revGain,echoWet;
+let started=false,observeTimer=null;
 let observed=false,collapse='AB';
 let particles=[];
 const p={
@@ -269,7 +268,8 @@ const p={
   decoherence:36,
   entanglement:32,
   echo:34,
-  hall:46
+  hall:46,
+  volume:78
 };
 const gens={A:null,B:null};
 const visual={
@@ -318,18 +318,24 @@ function initAudio(){
   filter=ctx.createBiquadFilter();
   reverb=ctx.createConvolver();
   revGain=ctx.createGain();
+  echoWet=ctx.createGain();
 
-  reverb.buffer=makeImpulse(2.8,2.7);
+  reverb.buffer=makeImpulse(3.4,2.35);
   filter.type='lowpass';
 
+  // Dry path
   dryBus.connect(master);
 
+  // Echo path: independent wet branch
   fxBus.connect(delay);
   delay.connect(filter);
   filter.connect(feedback);
   feedback.connect(delay);
+  filter.connect(echoWet);
+  echoWet.connect(master);
 
-  filter.connect(reverb);
+  // Hall path: independent wet branch, directly from source send
+  fxBus.connect(reverb);
   reverb.connect(revGain);
   revGain.connect(master);
 
@@ -569,16 +575,22 @@ function applyMix(){
   const echo=p.echo/100;
   const hall=p.hall/100;
 
-  dryBus.gain.setTargetAtTime(.94-sup*.25,ctx.currentTime,.08);
-  fxBus.gain.setTargetAtTime(.08+sup*.34+tun*.12+echo*.42,ctx.currentTime,.08);
+  dryBus.gain.setTargetAtTime(.92-sup*.18,ctx.currentTime,.08);
 
-  delay.delayTime.setTargetAtTime(.10+tun*.48+echo*.32,ctx.currentTime,.1);
-  feedback.gain.setTargetAtTime(clamp(.10+sup*.20+dec*.25+echo*.36,0,.88),ctx.currentTime,.1);
+  // Source send stays stable. Echo and Hall have their own wet gains.
+  fxBus.gain.setTargetAtTime(.72,ctx.currentTime,.08);
 
-  filter.frequency.setTargetAtTime(6200-Math.pow(dec,1.25)*5200,ctx.currentTime,.12);
-  filter.Q.setTargetAtTime(.5+dec*2.4,ctx.currentTime,.12);
+  // ECHO: time + feedback + wet level
+  delay.delayTime.setTargetAtTime(.12+tun*.24+echo*.36,ctx.currentTime,.1);
+  feedback.gain.setTargetAtTime(clamp(.08+dec*.18+echo*.58,0,.86),ctx.currentTime,.1);
+  echoWet.gain.setTargetAtTime(echo*.68,ctx.currentTime,.08);
 
-  revGain.gain.setTargetAtTime(.04+sup*.14+dec*.06+hall*.72,ctx.currentTime,.1);
+  // Decoherence mainly erodes delayed information.
+  filter.frequency.setTargetAtTime(6800-Math.pow(dec,1.2)*5600,ctx.currentTime,.12);
+  filter.Q.setTargetAtTime(.5+dec*2.1,ctx.currentTime,.12);
+
+  // HALL: independent convolution wet level.
+  revGain.gain.setTargetAtTime(hall*.72,ctx.currentTime,.1);
 
   ['A','B'].forEach(g=>{
     const q=gens[g];
@@ -588,7 +600,9 @@ function applyMix(){
       q.gain.gain.setTargetAtTime(level,ctx.currentTime,.24);
     }
   });
-  master.gain.setTargetAtTime((bypassed||muted)?0:.78,ctx.currentTime,.05);
+  const vol=Math.pow(p.volume/100,1.45);
+  const masterBoost=Math.pow(10,10/20); // +10 dB
+  master.gain.setTargetAtTime(vol*.92*masterBoost,ctx.currentTime,.05);
 }
 function collapseNow(){
   observed=true;
@@ -658,16 +672,8 @@ $('reroll').onclick=async()=>{
     });
   }
 };
-$('bypass').onclick=()=>{
-  bypassed=!bypassed;
-  $('bypass').textContent='BYPASS: '+(bypassed?'ON':'OFF');
-  applyMix();
-};
-$('mute').onclick=()=>{
-  muted=!muted;
-  $('mute').textContent='MUTE: '+(muted?'ON':'OFF');
-  applyMix();
-};
+
+
 
 [
   ['super','superposition','superV'],
@@ -675,7 +681,8 @@ $('mute').onclick=()=>{
   ['deco','decoherence','decoV'],
   ['ent','entanglement','entV'],
   ['echo','echo','echoV'],
-  ['hall','hall','hallV']
+  ['hall','hall','hallV'],
+  ['volume','volume','volumeV']
 ].forEach(([id,key,out])=>{
   $(id).oninput=e=>{
     p[key]=+e.target.value;
