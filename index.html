@@ -160,12 +160,12 @@ input[type=range]::-webkit-slider-runnable-track{
   height:3px;background:rgba(247,247,242,.24);
 }
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:13px;height:17px;background:var(--accent);
+  -webkit-appearance:none;width:7px;height:17px;background:var(--accent);
   border:1px solid var(--ink);border-radius:0;margin-top:-7px
 }
 input[type=range]::-moz-range-track{height:3px;background:rgba(247,247,242,.24);border:0}
 input[type=range]::-moz-range-thumb{
-  width:13px;height:17px;background:var(--accent);
+  width:7px;height:17px;background:var(--accent);
   border:1px solid var(--ink);border-radius:0;
 }
 .classicFx{
@@ -1144,6 +1144,19 @@ function updateTimeLabel(){
   requestAnimationFrame(updateTimeLabel);
 }
 updateTimeLabel();
+
+
+$('reroll').addEventListener('click',()=>{
+  ['superposition','tunneling','decoherence','entanglement'].forEach(name=>{
+    const value=Math.floor(18+Math.random()*70);
+    p[name]=value;
+    const el=$(name);
+    if(el)el.value=value;
+    const out=$(name+'Val');
+    if(out)out.textContent=value;
+  });
+  applyMix();
+});
 
 scheduleObserve();
 animate();
