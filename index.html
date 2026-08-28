@@ -243,6 +243,11 @@ html,body{
   overflow:hidden;
 }
 
+
+.jpFx{margin-left:4px;font-size:4.8px;font-weight:400;letter-spacing:.04em;opacity:.58}
+.fxDesc{display:flex;justify-content:space-between;gap:6px}
+.fxDesc span{font-size:4.6px;letter-spacing:.03em;opacity:.48;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -287,7 +292,7 @@ html,body{
     <div class="observeFoot">
       <div>
         <div class="obsTitle">OBSERVATION FIELD</div>
-        <div class="obsNote">猫は勝手に観測される。</div>
+        <div class="obsNote">観測されるまで、猫の状態は定まらない。</div>
       </div>
       <div class="observeActions">
         <button class="catWalkBtn" id="catWalkBtn">CAT WALK</button>
@@ -310,38 +315,38 @@ html,body{
 
   <div class="control">
     <div class="row">
-      <b>SUPERPOSITION</b>
+      <b>SUPERPOSITION <small class="jpFx">重ね合わせ</small></b>
       <input id="super" type="range" min="0" max="100" value="58">
       <span id="superV">58</span>
     </div>
-    <div class="fxDesc">LAYER / PITCH / MULTIPLY</div>
+    <div class="fxDesc">LAYER / PITCH / MULTIPLY <span>音を重ね、分岐させる</span></div>
   </div>
 
   <div class="control">
     <div class="row">
-      <b>TUNNELING</b>
+      <b>TUNNELING <small class="jpFx">トンネル効果</small></b>
       <input id="tunnel" type="range" min="0" max="100" value="42">
       <span id="tunnelV">42</span>
     </div>
-    <div class="fxDesc">JUMP / REPEAT / SKIP</div>
+    <div class="fxDesc">JUMP / REPEAT / SKIP <span>時間を飛び越える</span></div>
   </div>
 
   <div class="control">
     <div class="row">
-      <b>DECOHERENCE</b>
+      <b>DECOHERENCE <small class="jpFx">デコヒーレンス</small></b>
       <input id="deco" type="range" min="0" max="100" value="36">
       <span id="decoV">36</span>
     </div>
-    <div class="fxDesc">DECAY / BLUR / DESTROY</div>
+    <div class="fxDesc">DECAY / BLUR / DESTROY <span>情報を崩してぼかす</span></div>
   </div>
 
   <div class="control">
     <div class="row">
-      <b>ENTANGLEMENT</b>
+      <b>ENTANGLEMENT <small class="jpFx">量子もつれ</small></b>
       <input id="ent" type="range" min="0" max="100" value="32">
       <span id="entV">32</span>
     </div>
-    <div class="fxDesc">A ↔ B INTERACTION</div>
+    <div class="fxDesc">A ↔ B INTERACTION <span>AとBを連動させる</span></div>
   </div>
 
   <div class="classicFx">
@@ -423,7 +428,7 @@ function flashField(key,val){
     $('fieldLabel').style.color='var(--bg)';
     $('fieldState').textContent=particles.length+' PARTICLES';
     fieldFlashTimer=null;
-  },900);
+  },1250);
 }
 
 function makeSwitches(g){
@@ -615,7 +620,54 @@ function scheduleTone(freq,amp,dur,g,when=0,type='sine',detune=0){
 }
 function scheduleNoise(g,kind='dust',when=0){
   const t=ctx.currentTime+when;
-  const dur=kind==='wave'?rr(2.2,.45):rr(.11,.018);
+
+  if(kind==='wave'){
+    const dur=rr(6.5,3.2);
+    const n=Math.max(64,Math.floor(ctx.sampleRate*dur));
+    const b=ctx.createBuffer(1,n,ctx.sampleRate);
+    const d=b.getChannelData(0);
+    for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+
+    const body=ctx.createBufferSource();
+    body.buffer=b;
+    const hp=ctx.createBiquadFilter();
+    hp.type='highpass';
+    hp.frequency.value=rr(90,35);
+    const lp=ctx.createBiquadFilter();
+    lp.type='lowpass';
+    lp.frequency.value=rr(2400,900);
+    lp.Q.value=rr(.8,.15);
+    const bodyGain=ctx.createGain();
+    const peak=rr(.09,.045);
+    bodyGain.gain.setValueAtTime(.0001,t);
+    bodyGain.gain.linearRampToValueAtTime(peak*.45,t+dur*.18);
+    bodyGain.gain.linearRampToValueAtTime(peak,t+dur*.38);
+    bodyGain.gain.linearRampToValueAtTime(peak*.72,t+dur*.58);
+    bodyGain.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    body.connect(hp).connect(lp).connect(bodyGain);
+    connectSource(bodyGain,g);
+
+    const foam=ctx.createBufferSource();
+    foam.buffer=b;
+    const foamBP=ctx.createBiquadFilter();
+    foamBP.type='bandpass';
+    foamBP.frequency.value=rr(5200,2600);
+    foamBP.Q.value=rr(1.6,.55);
+    const foamGain=ctx.createGain();
+    const foamPeak=peak*rr(.42,.20);
+    foamGain.gain.setValueAtTime(.0001,t);
+    foamGain.gain.linearRampToValueAtTime(foamPeak*.25,t+dur*.24);
+    foamGain.gain.linearRampToValueAtTime(foamPeak,t+dur*.43);
+    foamGain.gain.exponentialRampToValueAtTime(.0001,t+dur*.78);
+    foam.connect(foamBP).connect(foamGain);
+    connectSource(foamGain,g);
+
+    body.start(t); foam.start(t);
+    body.stop(t+dur+.05); foam.stop(t+dur+.05);
+    return;
+  }
+
+  const dur=rr(.11,.018);
   const n=Math.max(64,Math.floor(ctx.sampleRate*dur));
   const b=ctx.createBuffer(1,n,ctx.sampleRate);
   const d=b.getChannelData(0);
@@ -625,15 +677,12 @@ function scheduleNoise(g,kind='dust',when=0){
   src.buffer=b;
   const f=ctx.createBiquadFilter();
   const gain=ctx.createGain();
-
-  f.type=kind==='wave'?'lowpass':'bandpass';
-  f.frequency.value=kind==='wave'?rr(1800,160):rr(7800,700);
-  f.Q.value=kind==='wave'?rr(2,.3):rr(12,1);
-
+  f.type='bandpass';
+  f.frequency.value=rr(7800,700);
+  f.Q.value=rr(12,1);
   gain.gain.setValueAtTime(.0001,t);
-  gain.gain.exponentialRampToValueAtTime(kind==='wave'?rr(.08,.02):rr(.11,.025),t+.01);
+  gain.gain.exponentialRampToValueAtTime(rr(.11,.025),t+.01);
   gain.gain.exponentialRampToValueAtTime(.0001,t+dur);
-
   src.connect(f).connect(gain);
   connectSource(gain,g);
   src.start(t);
@@ -710,7 +759,7 @@ function fireEntanglement(sourceG,freq){
       scheduleNoise(other,'dust',when);
       if(power>.72)scheduleNoise(other,'dust',when+rr(.11,.025));
     }
-    if(type==='WAVE')scheduleNoise(other,'ghost',when);
+    if(type==='WAVE')scheduleNoise(other,'wave',when);
     if(type==='DRONE'&&gens[other]?.gain){
       const tt=ctx.currentTime+when;
       gens[other].gain.gain.setTargetAtTime(.07+.075*power,tt,.025);
@@ -746,7 +795,7 @@ function triggerEvent(g){
     fireEntanglement(g,freq);
   }
   if(type==='WAVE'){
-    scheduleNoise(g,'ghost',0);
+    scheduleNoise(g,'wave',0);
     if(Math.random()<Math.pow(p.superposition/100,1.05)){
       const n=1+Math.floor(Math.pow(p.superposition/100,1.45)*3);
       for(let i=0;i<n;i++)scheduleNoise(g,'wave',rr(.25+.7*p.superposition/100,.06)+i*.12);
@@ -799,7 +848,7 @@ function rebuildGen(g){
     let wait=1000;
     if(p[g].type==='PLUCK')wait=rr(1900,260);
     if(p[g].type==='DUST')wait=rr(760,70);
-    if(p[g].type==='WAVE')wait=rr(2600,850);
+    if(p[g].type==='WAVE')wait=rr(4200,1900);
     wait*=rr(1.22,.78);
     if(catWalk.on){
       const affinity=catWalkAffinity(g);
@@ -1243,52 +1292,145 @@ function drawField(){
   const c=$('field'),x=c.getContext('2d'),w=c.width,h=c.height;
   x.clearRect(0,0,w,h);
 
-  particles.forEach(pt=>{
-    pt.x+=pt.vx;
-    pt.y+=pt.vy;
-    pt.life-=pt.kind==='collapse'?.011:.007;
-
-    if(pt.kind==='tunnel' && Math.random()<.018){
-      pt.x=w-pt.x;
-      pt.y=rr(h-5,5);
-    }
-    if(pt.kind==='super' && Math.random()<.02){
-      particles.push({...pt,y:clamp(pt.y+rr(12,-12),3,h-3),life:pt.life*.72,vx:pt.vx*.82});
-    }
-  });
-
-  particles=particles.filter(pt=>pt.life>0&&pt.x>-5&&pt.x<w+5&&pt.y>-5&&pt.y<h+5);
   const quantumBlue='#0808e8';
   const quantumPink='#ff22c8';
+  const now=performance.now()/1000;
+  const s=p.superposition/100;
+  const t=p.tunneling/100;
+  const d=p.decoherence/100;
+  const e=p.entanglement/100;
+
+  // SUPERPOSITION: overlapping alternate states.
+  if(s>.01){
+    const rings=1+Math.floor(s*6);
+    const spread=3+s*18;
+    for(let i=0;i<rings;i++){
+      const phase=now*(.18+.08*i)+i*1.7;
+      const cx=w*.5+Math.sin(phase)*spread;
+      const cy=h*.5+Math.cos(phase*.83)*spread*.32;
+      const r=8+i*(3+s*3);
+      x.globalAlpha=.045+s*.12;
+      x.strokeStyle=i%2?quantumPink:quantumBlue;
+      x.lineWidth=.8;
+      x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.stroke();
+    }
+  }
+
+  // TUNNELING: visible gaps / portals across the field.
+  if(t>.01){
+    const portals=1+Math.floor(t*5);
+    for(let i=0;i<portals;i++){
+      const yy=((i+1)/(portals+1))*h + Math.sin(now*1.4+i)*3;
+      const jump=w*(.16+.68*((Math.sin(now*.43+i*2.2)+1)/2));
+      x.globalAlpha=.06+t*.20;
+      x.strokeStyle=quantumBlue;
+      x.lineWidth=.9+t*.55;
+      x.setLineDash([2,3+6*(1-t)]);
+      x.beginPath();
+      x.moveTo(4,yy);x.lineTo(jump-8,yy);
+      x.moveTo(jump+8,yy);x.lineTo(w-4,yy);
+      x.stroke();
+      x.setLineDash([]);
+      x.strokeStyle=quantumPink;
+      x.beginPath();x.arc(jump,yy,2+t*4,0,Math.PI*2);x.stroke();
+    }
+  }
+
+  // DECOHERENCE: clean information breaks into noisy fragments.
+  if(d>.01){
+    const grains=Math.floor(8+d*72);
+    x.lineWidth=.6;
+    for(let i=0;i<grains;i++){
+      const seed=i*91.73;
+      const gx=(Math.sin(seed+now*(.35+d*3.5))*43758.5453)%1;
+      const gy=(Math.sin(seed*1.7+now*(.23+d*2.7))*24634.6345)%1;
+      const px=Math.abs(gx)*w, py=Math.abs(gy)*h;
+      const len=.5+d*5;
+      x.globalAlpha=.015+d*.16;
+      x.strokeStyle=i%4===0?quantumPink:quantumBlue;
+      x.beginPath();x.moveTo(px-len,py);x.lineTo(px+len,py+Math.sin(seed)*d*4);x.stroke();
+    }
+  }
 
   particles.forEach(pt=>{
-    x.globalAlpha=clamp(pt.life,0,1);
-    const pink = pt.kind==='ent' || pt.kind==='collapse' ||
-                 (pt.kind==='super' && Math.random()>.55);
-    x.strokeStyle=pink?quantumPink:quantumBlue;
-    x.lineWidth=1.15;
+    pt.x+=pt.vx; pt.y+=pt.vy;
+    pt.life-=pt.kind==='collapse'?.011:.007;
 
-    let radius=1.6;
-    if(pt.kind==='super')radius=2.0;
-    if(pt.kind==='ent')radius=2.5;
-    if(pt.kind==='tunnel')radius=1.45;
+    if(pt.kind==='tunnel' && Math.random()<(.006+t*.05)){
+      pt.x=w-pt.x; pt.y=rr(h-5,5);
+    }
+    if(pt.kind==='super' && Math.random()<(.004+s*.055)){
+      particles.push({...pt,
+        y:clamp(pt.y+rr(8+18*s,-8-18*s),3,h-3),
+        life:pt.life*(.58+.25*s),
+        vx:pt.vx*(.72+.18*s)
+      });
+    }
+    if(d>.01){pt.y+=rr(d*1.8,-d*1.8);pt.x+=rr(d*.9,-d*.9);}
+  });
+
+  particles=particles.filter(pt=>pt.life>0&&pt.x>-8&&pt.x<w+8&&pt.y>-8&&pt.y<h+8);
+
+  // ENTANGLEMENT: pair states with visible links.
+  if(e>.02 && particles.length>1){
+    const maxLinks=Math.min(12,1+Math.floor(e*11));
+    let links=0;
+    for(let i=0;i<particles.length && links<maxLinks;i++){
+      const a=particles[i];
+      if(i%2)continue;
+      let best=null,bestDist=Infinity;
+      for(let j=i+1;j<particles.length;j++){
+        const b=particles[j],dx=a.x-b.x,dy=a.y-b.y,dist=dx*dx+dy*dy;
+        if(dist<bestDist){best=b;bestDist=dist;}
+      }
+      if(best && bestDist<Math.pow(70+e*180,2)){
+        x.globalAlpha=.035+e*.22;
+        x.strokeStyle=links%2?quantumPink:quantumBlue;
+        x.lineWidth=.6+e*.55;
+        x.setLineDash([1,3]);
+        x.beginPath();x.moveTo(a.x,a.y);x.lineTo(best.x,best.y);x.stroke();
+        x.setLineDash([]);links++;
+      }
+    }
+  }
+
+  particles.forEach((pt,index)=>{
+    const life=clamp(pt.life,0,1);
+    x.globalAlpha=life*(1-d*.30);
+    const pink=pt.kind==='ent'||pt.kind==='collapse'||(pt.kind==='super'&&index%2===0);
+    x.strokeStyle=pink?quantumPink:quantumBlue;
+    x.lineWidth=1.0+s*.4;
+
+    let radius=1.5+s*.8;
+    if(pt.kind==='super')radius=2.0+s*2.5;
+    if(pt.kind==='ent')radius=2.3+e*2.3;
+    if(pt.kind==='tunnel')radius=1.35+t*1.8;
     if(pt.kind==='collapse')radius=3.2;
 
-    x.beginPath();
-    x.arc(pt.x,pt.y,radius,0,Math.PI*2);
-    x.stroke();
+    if(d>.55){
+      const cut=Math.PI*2*(.25+d*.42);
+      const start=(now*.9+index)*Math.PI*.7;
+      x.beginPath();x.arc(pt.x,pt.y,radius,start,start+Math.PI*2-cut);x.stroke();
+    }else{
+      x.beginPath();x.arc(pt.x,pt.y,radius,0,Math.PI*2);x.stroke();
+    }
 
-    // Occasional second state, offset by one pixel, for a quantum split feel.
-    if(pt.kind==='super' && pt.life>.45){
-      x.globalAlpha=clamp(pt.life*.42,0,1);
-      x.strokeStyle=pink?quantumBlue:quantumPink;
-      x.beginPath();
-      x.arc(pt.x+2.2,pt.y-1.2,radius*.72,0,Math.PI*2);
-      x.stroke();
+    if(s>.12){
+      const copies=Math.floor(s*3);
+      for(let k=0;k<copies;k++){
+        const off=(k+1)*(2+s*4);
+        x.globalAlpha=life*(.12+s*.20)/(k+1);
+        x.strokeStyle=pink?(k%2?quantumPink:quantumBlue):(k%2?quantumBlue:quantumPink);
+        x.beginPath();x.arc(pt.x+off,pt.y-off*.35,radius*(.72-.08*k),0,Math.PI*2);x.stroke();
+      }
     }
   });
-  x.globalAlpha=1;
-  if(!fieldFlashTimer)$('fieldState').textContent=particles.length+' PARTICLES';
+
+  x.globalAlpha=1;x.setLineDash([]);
+  if(!fieldFlashTimer){
+    const dominant=[['SUPER',s],['TUNNEL',t],['DECO',d],['ENTANGLE',e]].sort((a,b)=>b[1]-a[1])[0];
+    $('fieldState').textContent=dominant[0]+' '+Math.round(dominant[1]*100);
+  }
 }
 
 function drawCircuit(){
