@@ -300,6 +300,58 @@ html,body{
 }
 
 </style>
+<style>
+/* Responsive shell: keep the instrument usable on phones, tablets and desktops. */
+html,body{
+  min-width:0;
+  min-height:100%;
+  height:auto;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  touch-action:pan-y;
+}
+#app{
+  width:min(100%, 920px);
+  max-width:920px;
+  height:auto;
+  min-height:100dvh;
+  max-height:none;
+  overflow:visible;
+  padding-inline:max(10px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+@media (min-width:700px){
+  #app{padding-inline:20px}
+  .top{grid-template-columns:minmax(230px, .8fr) minmax(340px, 1.2fr);height:min(50svh,500px)}
+  .fx{min-height:0}
+  .row{grid-template-columns:clamp(116px,18vw,165px) 1fr 32px}
+  .fxDesc{padding-left:clamp(122px,19vw,171px)}
+}
+@media (max-width:540px){
+  #app{padding-inline:8px}
+  .top{height:auto;min-height:0;grid-template-columns:1fr;gap:8px}
+  .leftStack{grid-template-columns:1fr 1fr;grid-template-rows:none}
+  .gen{min-height:178px}
+  .observe{min-height:330px}
+  .fx{min-height:0}
+  .classicFx{grid-template-columns:1fr}
+  .row{grid-template-columns:minmax(88px,30vw) minmax(0,1fr) 26px}
+  .fxDesc{padding-left:calc(min(88px,30vw) + 6px)}
+  footer{padding-bottom:8px}
+}
+@media (max-width:360px){
+  .topbar{align-items:flex-start;gap:6px}
+  .brand{white-space:normal;flex-wrap:wrap}
+  .menu{flex-wrap:wrap;justify-content:flex-end}
+  .timeLabel,.menuBtn{padding-inline:5px;min-width:auto}
+  .leftStack{grid-template-columns:1fr}
+}
+@media (orientation:landscape) and (max-height:560px){
+  #app{max-width:100%;min-height:100%;padding-top:8px}
+  .top{grid-template-columns:minmax(220px, .8fr) minmax(330px, 1.2fr);min-height:330px;height:auto}
+  .leftStack{grid-template-columns:1fr 1fr;grid-template-rows:none}
+  .fx{min-height:0}
+}
+</style>
 </head>
 <body>
 <canvas id="circuitBG"></canvas>
